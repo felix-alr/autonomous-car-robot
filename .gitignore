@@ -1,0 +1,8 @@
+*.pdf
+*lock*
+.vscode/*
+.micropico
+*.aux
+*.log
+*__pycache__/
+*.idea/*

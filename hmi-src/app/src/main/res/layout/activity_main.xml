@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Hauptlayout für die Robotersteuerungs-App.
+    LinearLayout (vertikal) wird verwendet, um UI-Elemente untereinander anzuordnen.
+    Jedes Steuerelement (Button/TextView) ist mit einer eindeutigen ID versehen,
+    sodass es im Java-Code referenziert und angesteuert werden kann.
+-->
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:orientation="vertical">
+    <!-- Layout nimmt die gesamte Bildschirmbreite
+         Layout nimmt die gesamte Bildschirmhöhe
+         Innenabstand zum Bildschirmrand
+         Elemente werden untereinander angeordnet -->
+
+    <!-- Button zum Herstellen der Bluetooth-Verbindung -->
+    <Button
+        android:id="@+id/buttonConnect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Connect"/>
+
+
+    <!-- Anzeige des aktuellen Verbindungsstatus -->
+    <TextView
+        android:id="@+id/textViewStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Status: Nicht verbunden"
+        android:paddingTop="16dp"/>
+
+    <!-- Anzeige der X-Position des Roboters -->
+    <TextView
+        android:id="@+id/textViewPosX"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="X: -" />
+
+    <!-- Anzeige der Y-Position des Roboters -->
+    <TextView
+        android:id="@+id/textViewPosY"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Y: -" />
+
+    <!-- Anzeige des Phi-Winkels des Roboters -->
+    <TextView
+        android:id="@+id/textViewPhi"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Phi: -" />
+
+    <!-- Bereich für die Steuerungsbuttons (Steuerkreuz + Start) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="249dp"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:orientation="vertical">
+        <!-- Buttons werden zentriert ausgerichtet
+             Buttons übereinander anordnen -->
+
+        <!-- Vorwärts-Button -->
+        <Button
+            android:id="@+id/buttonForward"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:text="↑" />
+
+        <!-- Horizontale Anordnung für Links, Rückwärts, Rechts -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Links-Button -->
+            <Button
+                android:id="@+id/buttonLeft"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:text="←" />
+
+            <!-- Rückwärts-Button -->
+            <Button
+                android:id="@+id/buttonBackward"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:text="↓" />
+
+            <!-- Rechts-Button -->
+            <Button
+                android:id="@+id/buttonRight"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:text="→" />
+        </LinearLayout>
+
+
+        <!-- Start-Button (kann z. B. zum Aktivieren einer Automatik genutzt werden) -->
+        <Button
+            android:id="@+id/buttonStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Start" />
+
+    </LinearLayout>
+
+
+</LinearLayout>

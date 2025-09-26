@@ -6,3 +6,4 @@
 *.log
 *__pycache__/
 *.idea/*
+robot-docs/output/

@@ -1,5 +1,5 @@
-# HS-AMR Example Android App
-This app provides a example HMI for the HS-AMR Robot. 
+# HS-AR Example Android App
+This app provides a example HMI for the HS-AR Robot.
 Implemented are BT Connection/Dialog, Position request and external control.
 
 # Required Software

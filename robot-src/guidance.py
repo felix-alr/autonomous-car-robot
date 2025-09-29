@@ -7,7 +7,7 @@ from navigation import Navigation
 from communication import Communicator
 from utils import Display
 
-from pololu_3pi_2040_robot import motors 
+from pololu_3pi_2040_robot import motors
 
 SETUP_SPEED = 600
 

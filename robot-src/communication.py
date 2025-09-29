@@ -28,7 +28,7 @@ class Communicator:
         self.bindings = {}
         self.delim = "\r\n"
 
-        self.println("HSAMR2-Robot TUD-EuI 2025")
+        self.println("HSAR2-Robot TUD-EuI 2025")
 
     ## Register multiple key - callback bindings from a dictionary.
     #
@@ -87,11 +87,11 @@ class Communicator:
         """send registered parking spots to connected bluetooth device"""
         spots_list = self.nav.get_parking_spots()
         self.uart.write(f"s{self.delim}")
-        for (sec_idx, sec) in enumerate(spots_list): 
+        for (sec_idx, sec) in enumerate(spots_list):
             for (spot_idx, spot) in enumerate(sec):
                 self.uart.write(f"{sec_idx}{self.delim}{spot_idx}{self.delim}{spot[0]}{self.delim}{spot[1]}{self.delim}")
         self.uart.write(f"end{self.delim}")
-        
+
 
     ## Receive the user-selected target parking spot.
     #

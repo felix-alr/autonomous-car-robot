@@ -85,8 +85,8 @@ try:
             # handle manual operation via onboard buttons
             if button_a.check() or button_b.check() or button_c.check():
                 # set the robot inactive
-                con.set_mode(control.ControlMode.Inactive)
-                con.run()
+                gui.request_state(guidance.GuidanceState.IDLE)
+                gui.run()
                 index = menu.run()
                 # definitely not the best way to do this
                 if options[index] == "idle":

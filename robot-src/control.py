@@ -12,8 +12,9 @@ from navigation import Navigation
 ## Enum for modes of the ModeController, that is the different specific control algorithms.
 class ControlMode:
     Line = "Line"
-    VOmega = "VOmega"
+    Kinematic = "Kinematic"
     Path = "Path"
+    Position = "Position"
     Inactive = "Inactive"
 
 
@@ -31,10 +32,11 @@ class ModeController:
         self.line_follower = LineFollower(self._motors, perception)
         self.kinematic_controller = KinematicController(self._motors, self._perception)
         self.path_follower = PathFollower()
+        self.position_controller = PositionController()
 
     ## Select a specific control algorithm.
     #
-    # @param mode The controller to use.
+    # @param mode The control mode to activate.
     def set_mode(self, mode: ControlMode):
         self._mode = mode
 
@@ -43,7 +45,7 @@ class ModeController:
         if self._mode == ControlMode.Inactive:
             self._motors.off()
 
-        elif self._mode == ControlMode.VOmega:
+        elif self._mode == ControlMode.Kinematic:
             self.kinematic_controller.run()
 
         elif self._mode == ControlMode.Line:
@@ -51,6 +53,9 @@ class ModeController:
 
         elif self._mode == ControlMode.Path:
             self.path_follower.run()
+
+        elif self._mode == ControlMode.Position:
+            self.position_controller.run()
 
 
 ## Controller for following the black parcours line.
@@ -116,6 +121,14 @@ class KinematicController:
 
 ## Controller to follow a polynomial path between a start and target pose.
 class PathFollower:
+    def __init__(self):
+        pass
+
+    def run(self):
+        pass
+
+## Controller implementing a position control algorithm.
+class PositionController:
     def __init__(self):
         pass
 

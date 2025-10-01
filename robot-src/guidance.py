@@ -73,8 +73,8 @@ class GuidanceStateMachine:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        # self.display.show_pose_and_dist(self.perception, self.navigation)
-        self.show_current_state()
+        self.display.show_pose_and_dist(self.perception, self.navigation)
+        # self.show_current_state()
 
         if self.current_state == GuidanceState.IDLE:
             # entry action
@@ -151,7 +151,7 @@ class GuidanceStateMachine:
         elif self.current_state == GuidanceState.EXTERNAL:
             # entry action
             if self.current_state != self.last_state:
-                self.control.set_mode(ControlMode.VOmega)
+                self.control.set_mode(ControlMode.Kinematic)
             # nominal action
             self.control.run()
 

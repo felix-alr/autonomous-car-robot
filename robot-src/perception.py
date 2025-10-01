@@ -8,6 +8,7 @@ import machine
 from pololu_3pi_2040_robot import robot
 from parameters import COUNTS_PER_REV
 
+
 ## Averaging filter of specified size.
 #
 # Averaging is a simple means to smoothen a signal.
@@ -36,26 +37,24 @@ class WheelSpeedFilter:
     def update(self):
         counts_l, counts_r = self.encoders.get_counts()
         pass
-    
+
     def get_wheel_speed_left(self):
         raise NotImplementedError
 
     def get_wheel_speed_right(self):
         raise NotImplementedError
 
-
+## Class to model a line sensor to calculate the lateral deviation from
+# the center of the line.
 class PerceptionLineSensor:
-    LINE_SENSOR_COUNT = 5
-    MIN_THRESH = 50
-
-    def __init__(self, line_sensor: robot.LineSensors):
-        self.line_sensor = line_sensor
+    def __init__(self, line_sensors: robot.LineSensors):
+        self.line_sensors = line_sensors
 
     def get_raw_data(self):
-        return self.line_sensor.read()
+        return self.line_sensors.read()
 
     def calibrate(self):
-        self.line_sensor.calibrate()
+        self.line_sensors.calibrate()
 
     ## Get the deviation from the center of the parcours line.
     def read_line(self):
@@ -63,10 +62,8 @@ class PerceptionLineSensor:
         raise NotImplementedError
 
     def read_line_reduced(self):
-        values = self.line_sensor.read()
-        return (
-            -3000 * values[0] + 3000 * values[-1]
-        ) // 2 
+        values = self.line_sensors.read()
+        return (-3000 * values[0] + 3000 * values[-1]) // 2
 
 
 ## Class to read and control the Sharp GP2Y0E03 triangulation sensor.
@@ -129,6 +126,7 @@ class Perception:
     def get_line_deviation(self):
         return self.line_sensor.read_line_reduced()
 
+    ## Get distance of obstacles to the right of the robot in mm.
     def get_distance(self):
         return self.distance_sensor.get_distance()
 

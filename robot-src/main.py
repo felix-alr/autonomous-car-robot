@@ -88,7 +88,7 @@ try:
                 gui.request_state(guidance.GuidanceState.IDLE)
                 gui.run()
                 index = menu.run()
-                # definitely not the best way to do this
+
                 if options[index] == "idle":
                     gui.request_state(guidance.GuidanceState.IDLE)
                 elif options[index] == "calibrate":
@@ -100,6 +100,8 @@ try:
                     display.text_line("Exiting to repl.", 3)
                     display.show()
                     sys.exit(0)
+                else:
+                    raise ValueError(f"Option {options[index]} not handled.")
 
             # execute the main state machine
             gui.run()
@@ -115,6 +117,7 @@ try:
                 leds.set(1, (0, 0, 0))  # reset bottom center led
                 leds.show()
                 bat_led_state = False
+
             # pad execution time to SAMPLETIME
             dt = time.ticks_diff(time.ticks_us(), ts)
             if dt < SAMPLETIME:

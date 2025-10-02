@@ -40,7 +40,7 @@ class Display(robot.Display):
 ## Check whether the battery level is to be considered empty.
 # @return True if battery voltage is low.
 def check_battery_empty(bat: Battery) -> bool:
-    return bat.get_level_millivolts() < 4400 
+    return bat.get_level_millivolts() < 4400
 
 ## LED to signal nominal operation with a simple animation
 class HeartbeatLED:
@@ -61,27 +61,22 @@ class HeartbeatLED:
         elif self.state < 0:
             self.state = 0
             self.step = -self.step
-    
+
 ## Write data to a local csv file
 class CSVLogger:
     ## Initialize the Logger
     # @param file the file path of the resulting csv
     # @param columns list of all column names
     def __init__(self, file, columns: list):
-        self.fd = open(file, "w")
+        self.file = file
         header = ",".join(columns) + "\n"
-        self.fd.write(header)
+        with open(file, "w") as f:
+            f.write(header)
 
     ## Write a datum to the file
     # @param row list of row elements
     def write(self, row: list):
         row_str = [str(i) for i in row]
         entry = ",".join(row_str) + "\n"
-        self.fd.write(entry)
-
-    ## Close the attached file. This will invalidate the object.
-    def close(self):
-        self.fd.close()
-
-    def __del__(self):
-        self.close()
+        with open(self.file, "+a") as f:
+            f.write(entry)

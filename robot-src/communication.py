@@ -27,6 +27,7 @@ class Communicator:
         self.buf = ""
         self.bindings = {}
         self.delim = "\r\n"
+        self.target_pos: tuple[int, int] | None = None
 
         self.println("HSAR2-Robot TUD-EuI 2025")
 
@@ -92,14 +93,26 @@ class Communicator:
                 self.uart.write(f"{sec_idx}{self.delim}{spot_idx}{self.delim}{spot[0]}{self.delim}{spot[1]}{self.delim}")
         self.uart.write(f"end{self.delim}")
 
+    ## Read two ints divided by newlines and return as tuple
+    def receive_2_tuple_int(self) -> tuple[int, int]:
+        buf = self.uart.read().decode("utf-8", "strict")
+        split = buf.split('\r')
+        return (int(split[0]), int(split[1]))
+
 
     ## Receive the user-selected target parking spot.
     #
     # Get the target spot, which the user selected from the connected bluetooth device as a tuple of section number and index of the spot in that section.
     # @return target spot as (section, index)
     def receive_target_spot(self) -> tuple[int, int]:
-        buf = self.uart.read().decode("utf-8", "strict")
-        split = buf.split('\r')
-        section = int(split[0])
-        idx = int(split[1])
-        return (section, idx)
+        return self.receive_2_tuple_int()
+
+    ## Receive and save a target position
+    def receive_target_position(self):
+        self.target_pos = self.receive_2_tuple_int()
+
+    ## Get the target position.
+    #
+    # @returns (x, y) of target position in mm or None if no target has been received.
+    def get_target_pos(self) -> tuple[int, int]:
+        return self.target_pos

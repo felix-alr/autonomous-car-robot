@@ -58,6 +58,7 @@ try:
         "1": com.send_pose,
         "2": com.send_spots,
         "3": gui.start_parking,
+        "4": com.receive_target_position,
         "v": lambda: com.println(f"{battery.get_level_millivolts()}"),
         "y": lambda: gui.request_state(guidance.GuidanceState.SCOUT),
         "z": lambda: gui.request_state(guidance.GuidanceState.IDLE),
@@ -74,7 +75,7 @@ try:
 
     def populate_test_spots():
         """save fictitious spots for testing purposes"""
-        nav.parking_slots.append([(30, 300)])
+        nav.parking_spots.append([(30, 300)])
 
     ## main execution loop
     #

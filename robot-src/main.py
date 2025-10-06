@@ -75,7 +75,7 @@ try:
 
     def populate_test_spots():
         """save fictitious spots for testing purposes"""
-        nav.parking_spots.append([(30, 300)])
+        nav.add_parking_spot(1, navigation.ParkingSpot(100, -100, 300, -300, True))
 
     ## main execution loop
     #

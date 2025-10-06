@@ -55,7 +55,7 @@ class GuidanceStateMachine:
     # This should be used as a callback by the communication module bound to "3".
     def start_parking(self):
         """start the parking maneuver by receiving the user-selected spot and enabling the respective Guidance state"""
-        (section, idx) = self.com.receive_target_spot()
+        id = self.com.receive_target_spot()
         # TODO: request suitable Guidance State here
 
     ## Request the next state.

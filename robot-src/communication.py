@@ -11,12 +11,13 @@
 # key is received.
 
 from machine import Pin, UART
-from navigation import Navigation
+from navigation import Navigation, ParkingSpot
 
 
 class Mode:
     LISTENER = 1
     READER = 2
+
 
 ## Class to implement the serial bluetooth communication.
 class Communicator:
@@ -84,28 +85,49 @@ class Communicator:
         self.uart.write(buf)
 
     ## Send registered parking spots to connected bluetooth device.
+    #
+    # Write all parking spots to the serial connection in the format
+    # 
+    # s
+    # <id: int>
+    # <x1: int>
+    # <y1: int>
+    # <x2: int>
+    # <y2: int>
+    # <suitable_for_parking: bool (0 or 1)>
+    # [repeat for remaining spots ...]
+    # end
+    #
+    # where each element is on a new line.DeprecationWarning
     def send_spots(self):
         """send registered parking spots to connected bluetooth device"""
-        spots_list = self.nav.get_parking_spots()
-        self.uart.write(f"s{self.delim}")
-        for (sec_idx, sec) in enumerate(spots_list):
-            for (spot_idx, spot) in enumerate(sec):
-                self.uart.write(f"{sec_idx}{self.delim}{spot_idx}{self.delim}{spot[0]}{self.delim}{spot[1]}{self.delim}")
-        self.uart.write(f"end{self.delim}")
+        spots_map = self.nav.get_parking_spots()
+        self.uart.write(f"s{self.delim}") #  start symbol
+        for (id, parking_spot) in spots_map.items():
+            self.uart.write(
+                f"{id}{self.delim}" + 
+                f"{int(parking_spot.x1)}{self.delim}" + 
+                f"{int(parking_spot.y1)}{self.delim}" + 
+                f"{int(parking_spot.x2)}{self.delim}" + 
+                f"{int(parking_spot.y2)}{self.delim}" + 
+                f"{int(parking_spot.suitable_for_parking)}{self.delim}"
+            )
+        self.uart.write(f"end{self.delim}") # end of transmission
 
     ## Read two ints divided by newlines and return as tuple
     def receive_2_tuple_int(self) -> tuple[int, int]:
         buf = self.uart.read().decode("utf-8", "strict")
-        split = buf.split('\r')
+        split = buf.split("\r")
         return (int(split[0]), int(split[1]))
-
 
     ## Receive the user-selected target parking spot.
     #
     # Get the target spot, which the user selected from the connected bluetooth device as a tuple of section number and index of the spot in that section.
-    # @return target spot as (section, index)
-    def receive_target_spot(self) -> tuple[int, int]:
-        return self.receive_2_tuple_int()
+    # @return id of the selected spot
+    def receive_target_spot(self) -> int:
+        buf = self.uart.read().decode("utf-8", "strict")
+        split = buf.split("\r")
+        return int(split[0])
 
     ## Receive and save a target position
     def receive_target_position(self):

@@ -75,6 +75,7 @@ class EncoderPoseFilter(PoseFilter):
 
         return ds
 
+
 ## Struct representing a line in 2D-space.
 class Line:
     def __init__(self, x_start, y_start, x_end, y_end):
@@ -86,31 +87,43 @@ class Line:
         self.dy = y_end - y_start
         self.length = sqrt(self.dx**2 + self.dy**2)
 
+
+## Struct representing a parking spot.
+#
+# The coordinates should define corners of the rectangle representing the parking spot.
+class ParkingSpot:
+    def __init__(self, x1, y1, x2, y2, suitable_for_parking):
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+        self.suitable_for_parking = suitable_for_parking
+
+
 ## Class implementing all of the navigation functionality.
 class Navigation:
     def __init__(self, per: Perception):
         self.per = per
         self.pose = Pose()
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
-        self.parking_spots: list[list[tuple[int, int]]] = []
-        self.parcours = self.get_map()
+        self.parking_spots: dict[int, ParkingSpot] = {}
+
+        # To be implemented!
+        # self.parcours = [
+        #     Line(...),
+        #     Line(...),
+        #     ...
+        # ]
+        self.parcours: list[Line] = []
 
     ## Return a map of the parcours.
     #
     # @returns the map of the parcours as list of Lines
     def get_map(self):
-        # To be implemented!
-        # parcours = [
-        #     Line(...),
-        #     Line(...),
-        #     ...
-        # ]
-        # When finished, remove the following line.
-        parcours = None
-        return parcours
+        return self.parcours
 
     ## Run all the necessary internals to update the navigation.
-    # 
+    #
     # Should be periodically called in the main state machine.
     def update(self):
         self.pose_filter.update()
@@ -127,22 +140,24 @@ class Navigation:
     def get_position(self):
         return (self.pose.x, self.pose.y)
 
+    ## Adds a parking spot to the database.
+    def add_parking_spot(self, id: int, parking_spot: ParkingSpot):
+        self.parking_spots[id] = parking_spot
+
+    ## Return the ParkingSpot of a matching id.
+    def get_parking_spot(self, id: int):
+        return self.parking_spots[id]
+
     ## Reset the module to assert the robot is located in the starting pose.
     def reset(self):
         self.pose_filter.reset()
 
     ## Return all perceived parking spots.
     #
-    # @returns list[list[tuple(int, int)]] where the outer list represents each segment,
-    # which in turn can have multiple parking spots in the inner list. Each spot is characterized
-    # by a tuple of a local start and end coordinate expressed in millimeters.
-    # Detected spots in the third and fourth segment of 20 cm length
-    # could for example look like this:
-    # [[],[],[(50, 250)],[(100, 300)],[],[]]
+    # @returns dict of ids and respective ParkingSpots
     def get_parking_spots(self):
         return self.parking_spots
 
     ## Scan for available parking spots on the side.
     def scan_parking_spots(self):
         pass
-

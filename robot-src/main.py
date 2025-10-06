@@ -130,4 +130,9 @@ except Exception as e:
     # save exception for later examination in the repl and print to display
     exc = e
     Display.show_exception(e)
+    with open("error.txt", "wt") as f:
+        from sys import _exc_traceback
+        tb = _exc_traceback(e)
+        f.write(repr(e))
+        f.write(repr(tb))
     raise

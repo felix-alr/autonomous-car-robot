@@ -21,6 +21,8 @@ try:
     ## time for one execution cycle
     SAMPLETIME = 50000  # in microseconds (us)
 
+    _gui_run_fp = None # eventually hold the original gui.run func
+
     display = Display()
     button_a = ButtonA()
     button_b = ButtonB()
@@ -112,7 +114,7 @@ try:
         # nominal action
         target = com.get_target_pos()
         if target:
-            self.control.position_controller.set_position(com.get_target_pos())
+            self.control.position_controller.set_position(target)
         self.control.run()
 
         # exit action
@@ -125,12 +127,14 @@ try:
         if self.requested_state:
             self.current_state = self.requested_state
             self.requested_state = None
+            # restore original run when exiting from position control
+            guidance.GuidanceStateMachine.run = _gui_run_fp
 
     ## main execution loop
     #
     # Wrapping this in a function makes it possible to cancel and restart normal operation via the REPL.
     def main_loop():
-        _gui_run_fp = None # eventually hold the original gui.run func
+        global _gui_run_fp
         while True:
             ts = time.ticks_us()  # get start time
             # handle manual operation via onboard buttons
@@ -138,10 +142,6 @@ try:
                 # set the robot inactive
                 gui.request_state(guidance.GuidanceState.IDLE)
                 gui.run()
-                # restore original run when exited from position control
-                if _gui_run_fp:
-                    guidance.GuidanceStateMachine.run = _gui_run_fp
-                    _gui_run_fp = None
                 index = menu.run()
 
                 if menu_items[index] == MenuItems.IDLE:

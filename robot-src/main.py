@@ -28,9 +28,20 @@ try:
     battery = Battery()
     leds = RGBLEDs()
     heartbeat = HeartbeatLED(leds, 4)
+
     ## items to show in the onboard display menu
-    options = ["idle", "calibrate", "scout", "exit to repl"]
-    menu = menu.Menu(options)
+    class MenuItems:
+        IDLE = "idle"
+        SETUP = "setup"
+        SCOUT = "scout"
+        POSCTRL = "position control"
+        EXIT = "exit to repl"
+        
+        def listify(self):
+            return [self.IDLE, self.SETUP, self.SCOUT, self.POSCTRL, self.EXIT]
+        
+    menu_items = MenuItems().listify()
+    menu = menu.Menu(menu_items)
     menu.display = display
     menu.next_button = button_c
     menu.previous_button = button_a
@@ -77,10 +88,49 @@ try:
         """save fictitious spots for testing purposes"""
         nav.add_parking_spot(1, navigation.ParkingSpot(100, -100, 300, -300, True))
 
+    ## Run function to hijack the state machine with position control.
+    #
+    # This run function will be used instead of the one defined in the guidance module
+    # to activate position control. (to keep the guidance FSM clean from this extra task)
+    def run_position_control(self: guidance.GuidanceStateMachine):
+        self.current_state = "Position_Control"
+
+        # update other modules
+        self.perception.update()
+        self.navigation.update()
+        self.display.fill(0)
+        self.display.text_line(self.current_state, 1)
+        self.display.text_line(f"T: {con.position_controller.target}", 3)
+        pos = nav.get_position()
+        self.display.text_line(f"C: ({int(pos[0])}, {int(pos[1])})", 5)
+        self.display.show()
+
+        # entry action
+        if self.current_state != self.last_state:
+            self.control.set_mode(control.ControlMode.Position)
+
+        # nominal action
+        target = com.get_target_pos()
+        if target:
+            self.control.position_controller.set_position(com.get_target_pos())
+        self.control.run()
+
+        # exit action
+        if self.requested_state:
+            self.control.set_mode(control.ControlMode.Inactive)
+        
+        self.com.run()
+        # finally save current state and apply possible next state
+        self.last_state = self.current_state
+        if self.requested_state:
+            self.current_state = self.requested_state
+            self.requested_state = None
+
     ## main execution loop
     #
     # Wrapping this in a function makes it possible to cancel and restart normal operation via the REPL.
     def main_loop():
+        _gui_run_fp = None # eventually hold the original gui.run func
         while True:
             ts = time.ticks_us()  # get start time
             # handle manual operation via onboard buttons
@@ -88,21 +138,29 @@ try:
                 # set the robot inactive
                 gui.request_state(guidance.GuidanceState.IDLE)
                 gui.run()
+                # restore original run when exited from position control
+                if _gui_run_fp:
+                    guidance.GuidanceStateMachine.run = _gui_run_fp
+                    _gui_run_fp = None
                 index = menu.run()
 
-                if options[index] == "idle":
+                if menu_items[index] == MenuItems.IDLE:
                     gui.request_state(guidance.GuidanceState.IDLE)
-                elif options[index] == "calibrate":
+                elif menu_items[index] == MenuItems.SETUP:
                     gui.request_state(guidance.GuidanceState.SETUP)
-                elif options[index] == "scout":
+                elif menu_items[index] == MenuItems.SCOUT:
                     gui.request_state(guidance.GuidanceState.SCOUT)
-                elif options[index] == "exit to repl":
+                elif menu_items[index] == MenuItems.EXIT:
                     display.fill(0)
                     display.text_line("Exiting to repl.", 3)
                     display.show()
                     sys.exit(0)
+                elif menu_items[index] == MenuItems.POSCTRL:
+                    # save original func and inject state machine for position control
+                    _gui_run_fp = guidance.GuidanceStateMachine.run
+                    guidance.GuidanceStateMachine.run = run_position_control
                 else:
-                    raise ValueError(f"Option {options[index]} not handled.")
+                    raise ValueError(f"Option {menu_items[index]} not handled.")
 
             # execute the main state machine
             gui.run()

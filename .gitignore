@@ -8,3 +8,5 @@
 *__pycache__/
 *.idea/*
 robot-docs/output/
+pyproject.toml
+.python-version

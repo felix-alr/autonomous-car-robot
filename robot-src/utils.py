@@ -19,22 +19,30 @@ class Display(robot.Display):
         for i in range(8):
             msg_line = msg[i * 16 : (i + 1) * 16]
             self.text(msg_line, 0, 8 * i, 1)
-
+        self.show()
     ## Print text to a specified line.
     # @param text The text to print.
     # @param line_no The zero-indexed line number where the text should be printed.
-    def text_line(self, text, line_no):
+    def text_line(self, text: str, line_no: int):
+        """print text in robot screen.
+        The display has 8 lines, numbered 0 to 7.
+
+        Args:
+            text (str): text
+            line_no (int): line number
+        """
         self.text(str(text), 0, 8 * line_no)
+        self.show()
 
     ## Clear the screen, print pose components linewise at the top and the measured side distance at the bottom.
     def show_pose_and_dist(self, per: Perception, nav: Navigation):
         """clear the screen, print pose components linewise at the top and the measured side distance at the bottom"""
         pose = nav.get_pose()
         self.fill(0)
-        self.text(f"{pose.x:.6g}", 0, 0)
-        self.text(f"{pose.y:.6g}", 0, 8)
-        self.text(f"{pose.phi:.6g}", 0, 16)
-        self.text(f"{per.get_distance():6g}", 0, 48)
+        self.text(f"x=   {pose.x:.6g}", 0, 0)
+        self.text(f"y=   {pose.y:.6g}", 0, 8)
+        self.text(f"phi= {pose.phi:.6g}", 0, 16)
+        self.text(f"dis = {per.get_distance():6g}", 0, 48)
         self.show()
 
 ## Check whether the battery level is to be considered empty.
@@ -67,15 +75,26 @@ class CSVLogger:
     ## Initialize the Logger
     # @param file the file path of the resulting csv
     # @param columns list of all column names
-    def __init__(self, file, columns: list):
-        self.file = file
+    def __init__(self, filename: str, columns: list[str]):
+        """create CSVLogger object
+
+        Args:
+            filename (str): name of the file, e.g. data.csv
+            columns (list[str]): list of column header names
+        """
+        self.file = filename
         header = ",".join(columns) + "\n"
-        with open(file, "w") as f:
+        with open(filename, "w") as f:
             f.write(header)
 
     ## Write a datum to the file
     # @param row list of row elements
     def write(self, row: list):
+        """write a row to the logger
+
+        Args:
+            row (list): list of data values
+        """
         row_str = [str(i) for i in row]
         entry = ",".join(row_str) + "\n"
         with open(self.file, "+a") as f:

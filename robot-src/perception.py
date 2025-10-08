@@ -13,7 +13,12 @@ from parameters import COUNTS_PER_REV
 #
 # Averaging is a simple means to smoothen a signal.
 class AvgFilter:
-    def __init__(self, size):
+    def __init__(self, size: int):
+        """create AveragingFilter object
+
+        Args:
+            size (int): length of the filter
+        """
         self.size = size
         self.values = [0.0] * size
         self.weights = [1.0] * size
@@ -25,7 +30,7 @@ class AvgFilter:
     def clear(self):
         self.values = [0.0] * self.size
 
-    def get_value(self):
+    def get_value(self) -> float:
         weighted_sum = sum(w * v for w, v in zip(self.weights, self.values))
         return weighted_sum / self.size
 
@@ -50,8 +55,13 @@ class PerceptionLineSensor:
     def __init__(self, line_sensors: robot.LineSensors):
         self.line_sensors = line_sensors
 
-    def get_raw_data(self):
-        return self.line_sensors.read()
+    def get_raw_data(self) -> list[int, int, int, int, int]:
+        """read line sensor raw data
+
+        Returns:
+            list[int, int, int, int, int]: list of brightness values
+        """
+        return list(self.line_sensors.read())
 
     def calibrate(self):
         self.line_sensors.calibrate()
@@ -61,8 +71,13 @@ class PerceptionLineSensor:
         # todo this is to be implemented by students
         raise NotImplementedError
 
-    def read_line_reduced(self):
-        values = self.line_sensors.read()
+    def read_line_reduced(self) -> int:
+        """calculate bad approximation for line deviation
+
+        Returns:
+            int: deviation
+        """
+        values = self.get_raw_data()
         return (-3000 * values[0] + 3000 * values[-1]) // 2
 
 
@@ -90,6 +105,12 @@ class DistanceSensor:
     ## Get the measured distance.
     # @returns The measured distance in mm or -1 if there was an error.
     def get_distance(self) -> int:
+        """return measured distance in mm.
+        return -1 if error during measuring occurs.
+
+        Returns:
+            int: distance in mm
+        """
         # dist/mm = (upper * 16 + lower) / 16 / 2^shift * 10
         try:
             dist_bytes = self.i2c.readfrom_mem(
@@ -124,6 +145,7 @@ class Perception:
 
     ## Get lateral deviation from black line.
     def get_line_deviation(self):
+        # todo students: improve this method
         return self.line_sensor.read_line_reduced()
 
     ## Get distance of obstacles to the right of the robot in mm.

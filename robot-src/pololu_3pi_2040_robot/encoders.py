@@ -13,7 +13,15 @@ class Encoders:
     def flip(self, flip):
         self._flip_sign = -1 if flip else 1
 
-    def get_counts(self, reset = False):
+    def get_counts(self, reset = False) -> tuple[int, int]:
+        """get wheel encoder counts.
+
+        Args:
+            reset (bool, optional): reset the counters. Defaults to False.
+
+        Returns:
+            tuple[int, int]: left encoder count, right encoder count
+        """
         # Sign on the 3pi encoders is reversed from what
         # the PIO counter gives us.
         left = - self.left.read() - self.left_offset

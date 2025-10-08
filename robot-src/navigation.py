@@ -78,7 +78,15 @@ class EncoderPoseFilter(PoseFilter):
 
 ## Struct representing a line in 2D-space.
 class Line:
-    def __init__(self, x_start, y_start, x_end, y_end):
+    def __init__(self, x_start: int, y_start: int, x_end: int, y_end: int):
+        """create Line object
+
+        Args:
+            x_start (int): x1-coordinate in mm
+            y_start (int): y1-coordinate in mm
+            x_end (int): x2-coordinate in mm
+            y_end (int): y2-coordinate in mm
+        """
         self.x_start = x_start
         self.y_start = y_start
         self.x_end = x_end
@@ -92,7 +100,16 @@ class Line:
 #
 # The coordinates should define corners of the rectangle representing the parking spot.
 class ParkingSpot:
-    def __init__(self, x1, y1, x2, y2, suitable_for_parking):
+    def __init__(self, x1: int, y1: int, x2: int, y2: int, suitable_for_parking: bool):
+        """create ParkingSpot object
+
+        Args:
+            x1 (int): x1-coordinate in mm
+            y1 (int): y1-coordinate in mm
+            x2 (int): x2-coordinate in mm
+            y2 (int): y2-coordinate in mm
+            suitable_for_parking (bool): suitability
+        """
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
@@ -119,7 +136,12 @@ class Navigation:
     ## Return a map of the parcours.
     #
     # @returns the map of the parcours as list of Lines
-    def get_map(self):
+    def get_map(self) -> list[Line]:
+        """get the parcours data
+
+        Returns:
+            list[Line]: list of lines
+        """
         return self.parcours
 
     ## Run all the necessary internals to update the navigation.
@@ -131,13 +153,13 @@ class Navigation:
         # Add further function calls to be executed here.
 
     ## Return the current Pose.
-    def get_pose(self):
+    def get_pose(self) -> Pose:
         return self.pose
 
     ## Return the current position.
     #
     # @returns a tuple of x and y coordinates
-    def get_position(self):
+    def get_position(self) -> tuple[float, float]:
         return (self.pose.x, self.pose.y)
 
     ## Adds a parking spot to the database.
@@ -145,7 +167,7 @@ class Navigation:
         self.parking_spots[id] = parking_spot
 
     ## Return the ParkingSpot of a matching id.
-    def get_parking_spot(self, id: int):
+    def get_parking_spot(self, id: int) -> ParkingSpot:
         return self.parking_spots[id]
 
     ## Reset the module to assert the robot is located in the starting pose.
@@ -155,7 +177,7 @@ class Navigation:
     ## Return all perceived parking spots.
     #
     # @returns dict of ids and respective ParkingSpots
-    def get_parking_spots(self):
+    def get_parking_spots(self) -> dict:
         return self.parking_spots
 
     ## Scan for available parking spots on the side.

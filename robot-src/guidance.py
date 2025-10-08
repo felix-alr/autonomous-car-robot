@@ -160,7 +160,7 @@ class GuidanceStateMachine:
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
 
-        # todo: implement more states here
+        # todo students: implement more states here
 
         self.com.run()
         # finally save current state and apply possible next state

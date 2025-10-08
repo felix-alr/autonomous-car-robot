@@ -24,13 +24,13 @@ class Motors:
         # You can edit these lines if your motors are reversed.
         self._flip_left_motor = False
         self._flip_right_motor = False
-        
+
     def flip_left(self, flip):
         self._flip_left_motor = flip
-        
+
     def flip_right(self, flip):
         self._flip_right_motor = flip
-        
+
     def _set_dir_left(self, speed):
         speed = round(speed)
         if speed < 0:
@@ -42,7 +42,7 @@ class Motors:
             self.left_motor_dir.value(self._flip_left_motor)
             return speed
         return 0
-        
+
     def _set_dir_right(self, speed):
         speed = round(speed)
         if speed < 0:
@@ -54,22 +54,49 @@ class Motors:
             self.right_motor_dir.value(self._flip_right_motor)
             return speed
         return 0
-    
+
     def set_speeds(self, left, right):
+        """set signed power value of both wheels.
+        positive values mean forward direction, negative values mean backwards.
+        maximum absolute value is 6000.
+        -6000 <= vl, vr <= 6000
+
+        Args:
+            left (float): left power value
+            right (float): right power value
+        """
         left = self._set_dir_left(left)
         right = self._set_dir_right(right)
         cc = (left << 16) | right
         mem32[_CH7_CC] = cc
 
     def set_left_speed(self, speed):
+        """set signed power value of left wheel.
+        positive value means forward direction, negative value means backwards.
+        maximum absolute value is 6000.
+        -6000 <= vl <= 6000
+
+        Args:
+            speed (float): power value
+        """
         speed = self._set_dir_left(speed)
         mem32[_CH7_CC] = (speed << 16) | (mem32[_CH7_CC] & 0xffff)
-        
+
     def set_right_speed(self, speed):
+        """set signed power value of right wheel.
+        positive value means forward direction, negative value means backwards.
+        maximum absolute value is 6000.
+        -6000 <= vr <= 6000
+
+        Args:
+            speed (float): power value
+        """
         speed = self._set_dir_right(speed)
         mem32[_CH7_CC] = (mem32[_CH7_CC] & 0xffff0000) | speed
 
     def off(self):
+        """stop both wheels
+        """
         self.set_speeds(0, 0)
 
 # For convenient access to this constant.

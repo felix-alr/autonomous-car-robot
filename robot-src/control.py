@@ -130,7 +130,11 @@ class PathFollower:
 ## Controller implementing a position control algorithm.
 class PositionController:
     def __init__(self):
-        pass
+        self.target = (0, 0)
 
+    ## Set target position with x and y coordinate.
+    def set_position(self, x, y):
+        self.target = (x, y)
+        
     def run(self):
         pass

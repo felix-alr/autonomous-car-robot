@@ -100,7 +100,7 @@ try:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        self.display.fill(0)
+        self.display.clear()
         self.display.text_line(self.current_state, 1)
         self.display.text_line(f"T: {con.position_controller.target}", 3)
         pos = nav.get_position()
@@ -150,7 +150,7 @@ try:
                 elif menu_items[index] == MenuItems.SCOUT:
                     gui.request_state(guidance.GuidanceState.SCOUT)
                 elif menu_items[index] == MenuItems.EXIT:
-                    display.fill(0)
+                    display.clear()
                     display.text_line("Exiting to repl.", 3)
                     display.show()
                     sys.exit(0)
@@ -162,8 +162,7 @@ try:
                     raise ValueError(f"Option {menu_items[index]} not handled.")
 
                 # clear the display
-                display.fill(0)
-                display.show()
+                display.clear()
 
             # execute the main state machine
             gui.run()

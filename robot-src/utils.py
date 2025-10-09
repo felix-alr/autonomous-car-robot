@@ -41,7 +41,7 @@ class Display(robot.Display):
     def show_pose_and_dist(self, per: Perception, nav: Navigation):
         """clear the screen, print pose components linewise at the top and the measured side distance at the bottom"""
         pose = nav.get_pose()
-        self.fill(0)
+        self.clear()
         self.text(f"x=   {round(pose.x, 2)}", 0, 0)
         self.text(f"y=   {round(pose.y, 2)}", 0, 8)
         self.text(f"phi= {round(pose.phi, 2)}", 0, 16)

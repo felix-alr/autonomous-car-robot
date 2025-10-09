@@ -76,6 +76,8 @@ class GuidanceStateMachine:
         self.navigation.update()
         # self.display.show_pose_and_dist(self.perception, self.navigation)
         self.show_current_state()
+        # run the communicator
+        self.com.run()
 
         if self.current_state == GuidanceState.IDLE:
             if self.current_state != self.last_state:
@@ -85,7 +87,7 @@ class GuidanceStateMachine:
 
             # nominal action
 
-            if self.requested_state:
+            if self.requested_state and self.requested_state != GuidanceState.IDLE:
                 # exit action
                 pass
 
@@ -135,7 +137,7 @@ class GuidanceStateMachine:
             if self.current_setup_state == GuidanceSetupState.DONE:
                 self.request_state(GuidanceState.IDLE)
 
-            if self.requested_state:
+            if self.requested_state and self.requested_state != GuidanceState.SETUP:
                 # exit action
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
@@ -148,7 +150,7 @@ class GuidanceStateMachine:
             # nominal action
             self.control.run()
 
-            if self.requested_state:
+            if self.requested_state and self.requested_state != GuidanceState.SCOUT:
                 # exit action
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
@@ -160,7 +162,7 @@ class GuidanceStateMachine:
             # nominal action
             self.control.run()
 
-            if self.requested_state:
+            if self.requested_state and self.requested_state != GuidanceState.EXTERNAL:
                 # exit action
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
@@ -169,8 +171,6 @@ class GuidanceStateMachine:
 
 
 
-        # run the communicator
-        self.com.run()
         # finally save state of current execution and apply possible state of next execution
         self.last_state = self.current_state
         if self.requested_state:

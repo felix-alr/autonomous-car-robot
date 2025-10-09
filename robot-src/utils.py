@@ -15,13 +15,18 @@ class Display(robot.Display):
     ## Print text to the screen that gets automatically wrapped on line bounds.
     # @param text The text to print.
     def long_text(self, text: str):
+        """method to display long text with automatic linebreak to prevent display overflow.
+        always starts at line 0.
+        Args:
+            text (str): text
+        """
         msg = str(text)
         for i in range(8):
             msg_line = msg[i * 16 : (i + 1) * 16]
-            # self.text(msg_line, 0, 8 * i, 1)
             if msg_line:
                 self.text_line(msg_line, i)
         self.show()
+
     ## Print text to a specified line.
     # @param text The text to print.
     # @param line_no The zero-indexed line number where the text should be printed.
@@ -49,6 +54,8 @@ class Display(robot.Display):
         self.show()
 
     def clear(self):
+        """clear the whole screen
+        """
         self.fill(0)
         self.show()
 

@@ -1,6 +1,14 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM --- Check if mpremote is accessible ---
+where mpremote >nul 2>nul
+if errorlevel 1 (
+    echo Error: "mpremote" command not found in PATH.
+    echo Please install mpremote and make sure to add it to your system PATH, see general manual chapter 6.
+    exit /b 1
+)
+
 REM Check if current directory name is "robot-src"
 for %%d in ("%cd%") do set "CURDIR=%%~nxd"
 

@@ -48,6 +48,10 @@ class Display(robot.Display):
         self.text(f"dist = {per.get_distance():6g}", 0, 48)
         self.show()
 
+    def clear(self):
+        self.fill(0)
+        self.show()
+
 ## Check whether the battery level is to be considered empty.
 # @return True if battery voltage is low.
 def check_battery_empty(bat: Battery) -> bool:

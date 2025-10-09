@@ -38,10 +38,10 @@ try:
         SCOUT = "scout"
         POSCTRL = "position control"
         EXIT = "exit to repl"
-        
+
         def listify(self):
             return [self.IDLE, self.SETUP, self.SCOUT, self.POSCTRL, self.EXIT]
-        
+
     menu_items = MenuItems().listify()
     menu = menu.Menu(menu_items)
     menu.display = display
@@ -105,7 +105,6 @@ try:
         self.display.text_line(f"T: {con.position_controller.target}", 3)
         pos = nav.get_position()
         self.display.text_line(f"C: ({int(pos[0])}, {int(pos[1])})", 5)
-        self.display.show()
 
         # entry action
         if self.current_state != self.last_state:
@@ -120,7 +119,7 @@ try:
         # exit action
         if self.requested_state:
             self.control.set_mode(control.ControlMode.Inactive)
-        
+
         self.com.run()
         # finally save current state and apply possible next state
         self.last_state = self.current_state

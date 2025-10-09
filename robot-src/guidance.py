@@ -93,9 +93,7 @@ class GuidanceStateMachine:
                 self.current_setup_state = GuidanceSetupState.RIGHT1
                 self._motors = motors.Motors()
                 self.navigation.reset()
-                self.display.fill(0)
                 self.display.text_line("setup", 0)
-                self.display.show()
 
             # nominal action: run submachine
             self.perception.calibrate_linesensor()
@@ -104,7 +102,6 @@ class GuidanceStateMachine:
                 if self.current_setup_state != self.last_setup_state:
                     self._motors.set_speeds(SETUP_SPEED,-SETUP_SPEED)
                     self.display.text_line("r1", 1)
-                    self.display.show()
                     self.last_setup_state = self.current_setup_state
 
                 # exit action

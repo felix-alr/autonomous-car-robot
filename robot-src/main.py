@@ -162,6 +162,10 @@ try:
                 else:
                     raise ValueError(f"Option {menu_items[index]} not handled.")
 
+                # clear the display
+                display.fill(0)
+                display.show()
+
             # execute the main state machine
             gui.run()
             heartbeat.update()

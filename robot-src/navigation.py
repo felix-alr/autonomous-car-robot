@@ -16,7 +16,7 @@ DEG_TO_RAD = pi / 180.0
 ## Struct representing the robot pose.
 #
 # The pose consists of a position in x-y-coordinates in mm and
-# an orientation angle phi in degrees.
+# an orientation angle phi from x to y axis in degrees.
 class Pose:
     def __init__(self, x=0.0, y=0.0, phi=0.0):
         self.x = x
@@ -123,9 +123,10 @@ class Navigation:
         self.per = per
         self.pose = Pose()
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
+        ## dictionary for saving the detected ParkingSpots using an int as key
         self.parking_spots: dict[int, ParkingSpot] = {}
 
-        # To be implemented!
+        # todo students: define parcours using Line segments!
         # self.parcours = [
         #     Line(...),
         #     Line(...),

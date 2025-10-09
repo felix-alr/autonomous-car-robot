@@ -117,7 +117,7 @@ class GuidanceStateMachine:
             elif self.current_setup_state == GuidanceSetupState.LEFT:
                 if self.current_setup_state != self.last_setup_state:
                     self._motors.set_speeds(-SETUP_SPEED, SETUP_SPEED)
-                    self.display.text_line("l", 1)
+                    self.display.text_line("l1", 1)
                     self.display.show()
                     self.last_setup_state = self.current_setup_state
 
@@ -127,6 +127,7 @@ class GuidanceStateMachine:
 
             elif self.current_setup_state == GuidanceSetupState.RIGHT2:
                 if self.current_setup_state != self.last_setup_state:
+                    self.display.text_line("r2", 1)
                     self._motors.set_speeds(SETUP_SPEED, -SETUP_SPEED)
                     self.last_setup_state = self.current_setup_state
 

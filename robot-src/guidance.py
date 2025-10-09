@@ -64,7 +64,6 @@ class GuidanceStateMachine:
 
     ## Helper to print the current state on the display.
     def show_current_state(self):
-        self.display.fill_rect(0, 0, 128, 8, 0)
         self.display.text_line(self.current_state, 0)
         self.display.show()
 
@@ -95,7 +94,7 @@ class GuidanceStateMachine:
                 self._motors = motors.Motors()
                 self.navigation.reset()
                 self.display.fill(0)
-                self.display.text("setup", 0, 0)
+                self.display.text_line("setup", 0)
                 self.display.show()
 
             # nominal action: run submachine
@@ -104,7 +103,7 @@ class GuidanceStateMachine:
                 # entry action
                 if self.current_setup_state != self.last_setup_state:
                     self._motors.set_speeds(SETUP_SPEED,-SETUP_SPEED)
-                    self.display.text("r1", 0, 8)
+                    self.display.text_line("r1", 1)
                     self.display.show()
                     self.last_setup_state = self.current_setup_state
 
@@ -116,7 +115,7 @@ class GuidanceStateMachine:
             elif self.current_setup_state == GuidanceSetupState.LEFT:
                 if self.current_setup_state != self.last_setup_state:
                     self._motors.set_speeds(-SETUP_SPEED, SETUP_SPEED)
-                    self.display.text("l", 0, 8)
+                    self.display.text_line("l", 1)
                     self.display.show()
                     self.last_setup_state = self.current_setup_state
 

@@ -18,19 +18,22 @@ class Display(robot.Display):
         msg = str(text)
         for i in range(8):
             msg_line = msg[i * 16 : (i + 1) * 16]
-            self.text(msg_line, 0, 8 * i, 1)
+            # self.text(msg_line, 0, 8 * i, 1)
+            if msg_line:
+                self.text_line(msg_line, i)
         self.show()
     ## Print text to a specified line.
     # @param text The text to print.
     # @param line_no The zero-indexed line number where the text should be printed.
     def text_line(self, text: str, line_no: int):
-        """print text in robot screen.
+        """print text on robot screen.
         The display has 8 lines, numbered 0 to 7.
 
         Args:
             text (str): text
             line_no (int): line number
         """
+        self.fill_rect(0, line_no*8, 128, 8, 0) # clear line
         self.text(str(text), 0, 8 * line_no)
         self.show()
 
@@ -39,10 +42,10 @@ class Display(robot.Display):
         """clear the screen, print pose components linewise at the top and the measured side distance at the bottom"""
         pose = nav.get_pose()
         self.fill(0)
-        self.text(f"x=   {pose.x:.6g}", 0, 0)
-        self.text(f"y=   {pose.y:.6g}", 0, 8)
-        self.text(f"phi= {pose.phi:.6g}", 0, 16)
-        self.text(f"dis = {per.get_distance():6g}", 0, 48)
+        self.text(f"x=   {round(pose.x, 2)}", 0, 0)
+        self.text(f"y=   {round(pose.y, 2)}", 0, 8)
+        self.text(f"phi= {round(pose.phi, 2)}", 0, 16)
+        self.text(f"dist = {per.get_distance():6g}", 0, 48)
         self.show()
 
 ## Check whether the battery level is to be considered empty.

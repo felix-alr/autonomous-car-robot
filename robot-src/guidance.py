@@ -60,11 +60,11 @@ class GuidanceStateMachine:
         # todo students: request suitable GuidanceState here, process the id ...
 
 
-    ## Request the next state.
+    ## Request the state of next execution.
     def request_state(self, state: GuidanceState):
         self.requested_state = state
 
-    ## Helper to print the current state on the display.
+    ## Helper to print the state of current execution on the display.
     def show_current_state(self):
         self.display.text_line(self.current_state, 0)
         self.display.show()
@@ -133,7 +133,7 @@ class GuidanceStateMachine:
                     self.current_setup_state = GuidanceSetupState.DONE
 
             if self.current_setup_state == GuidanceSetupState.DONE:
-                self.current_state = GuidanceState.IDLE
+                self.request_state(GuidanceState.IDLE)
 
             if self.requested_state:
                 # exit action
@@ -171,7 +171,7 @@ class GuidanceStateMachine:
 
         # run the communicator
         self.com.run()
-        # finally save current state and apply possible next state
+        # finally save state of current execution and apply possible state of next execution
         self.last_state = self.current_state
         if self.requested_state:
             self.current_state = self.requested_state

@@ -46,6 +46,7 @@ class GuidanceStateMachine:
         self.navigation = nav
         self.control = con
         self.com = com
+        # example of making bindings on runtime, for the general keymap see main.py
         self.com.bind(lambda: self.request_state(GuidanceState.SETUP), "c")
         self.com.bind(lambda: self.navigation.reset(), "l")
 
@@ -56,7 +57,8 @@ class GuidanceStateMachine:
     def start_parking(self):
         """start the parking maneuver by receiving the user-selected spot and enabling the respective Guidance state"""
         id = self.com.receive_target_spot()
-        # TODO: request suitable Guidance State here
+        # todo students: request suitable GuidanceState here, process the id ...
+
 
     ## Request the next state.
     def request_state(self, state: GuidanceState):
@@ -72,25 +74,26 @@ class GuidanceStateMachine:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        self.display.show_pose_and_dist(self.perception, self.navigation)
-        # self.show_current_state()
+        # self.display.show_pose_and_dist(self.perception, self.navigation)
+        self.show_current_state()
 
         if self.current_state == GuidanceState.IDLE:
-            # entry action
             if self.current_state != self.last_state:
+                # entry action
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
 
             # nominal action
 
-            # exit action
             if self.requested_state:
+                # exit action
                 pass
 
         elif self.current_state == GuidanceState.SETUP:
-            # entry action
             if self.current_state != self.last_state:
+                # entry action
                 self.current_setup_state = GuidanceSetupState.RIGHT1
+                self.last_setup_state = None
                 self._motors = motors.Motors()
                 self.navigation.reset()
                 self.display.text_line("setup", 0)
@@ -98,14 +101,14 @@ class GuidanceStateMachine:
             # nominal action: run submachine
             self.perception.calibrate_linesensor()
             if self.current_setup_state == GuidanceSetupState.RIGHT1:
-                # entry action
                 if self.current_setup_state != self.last_setup_state:
+                    # entry action
                     self._motors.set_speeds(SETUP_SPEED,-SETUP_SPEED)
                     self.display.text_line("r1", 1)
                     self.last_setup_state = self.current_setup_state
 
-                # exit action
                 if self.navigation.get_pose().phi <= -90.0:
+                    # exit action
                     self.current_setup_state = GuidanceSetupState.LEFT
                     self._motors.set_speeds(0, 0)
 
@@ -132,32 +135,41 @@ class GuidanceStateMachine:
             if self.current_setup_state == GuidanceSetupState.DONE:
                 self.current_state = GuidanceState.IDLE
 
+            if self.requested_state:
+                # exit action
+                self.control.set_mode(ControlMode.Inactive)
+                self.control.run()
+
         elif self.current_state == GuidanceState.SCOUT:
-            # entry action
             if self.current_state != self.last_state:
+                # entry action
                 self.control.set_mode(ControlMode.Line)
+
             # nominal action
             self.control.run()
 
-            # exit action
             if self.requested_state:
+                # exit action
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
 
         elif self.current_state == GuidanceState.EXTERNAL:
-            # entry action
             if self.current_state != self.last_state:
+                # entry action
                 self.control.set_mode(ControlMode.Kinematic)
             # nominal action
             self.control.run()
 
-            # exit action
             if self.requested_state:
+                # exit action
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
 
         # todo students: implement more states here
 
+
+
+        # run the communicator
         self.com.run()
         # finally save current state and apply possible next state
         self.last_state = self.current_state

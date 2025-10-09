@@ -122,7 +122,7 @@ class Communicator:
 
     ## Receive the user-selected target parking spot.
     #
-    # Get the target spot, which the user selected from the connected bluetooth device as a tuple of section number and index of the spot in that section.
+    # Get the id of the user selected target spot from the tablet.
     # @return id of the selected spot
     def receive_target_spot(self) -> int:
         buf = self.uart.read().decode("utf-8", "strict")

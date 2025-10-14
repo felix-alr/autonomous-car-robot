@@ -70,18 +70,20 @@ class HeartbeatLED:
         self.leds = leds
         self.idx = idx
         self.state = 0
-        self.step = 10
+        self.step = 5
+        self.max = 100
+        self.min = 0
 
     def update(self):
         self.leds.set(self.idx, (0, self.state, 0))
         self.leds.show()
 
         self.state += self.step
-        if self.state > 255:
-            self.state = 255
+        if self.state > self.max:
+            self.state = self.max
             self.step = -self.step
-        elif self.state < 0:
-            self.state = 0
+        elif self.state < self.min:
+            self.state = self.min
             self.step = -self.step
 
 ## Write data to a local csv file

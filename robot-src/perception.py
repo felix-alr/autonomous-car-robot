@@ -83,24 +83,35 @@ class PerceptionLineSensor:
 
 ## Class to read and control the Sharp GP2Y0E03 triangulation sensor.
 class DistanceSensor:
+    ## Initialize the distance sensor in a disabled state. Use 'activate' to enable the sensor when needed.
     def __init__(self):
         self.i2c = machine.I2C(0, scl=machine.Pin(5), sda=machine.Pin(4), freq=400_000)
         self._device_addr = 0x80 >> 1
         self._reg_upper_addr = 0x5E
         self._reg_lower_addr = 0x5F
         self._shift_addr = 0x35
+
         self.control_pin = machine.Pin(24, mode=machine.Pin.OUT, value=1)
-        time.sleep_ms(1)  # wait for distance sensor startup
+        self.enabled = True
+        time.sleep_ms(1)
         self.shift = self.i2c.readfrom_mem(self._device_addr, self._shift_addr, 1)[0]
 
-    ## Enable the sensor.
+        # deactivate sensor by default to save power
+        self.deactivate()
+
+    ## Enable the sensor if not already enabled.
     def activate(self):
-        self.control_pin.value(1)
+        if not self.enabled:
+            self.control_pin.value(1)
+            time.sleep_ms(1)  # ensure sensor is ready for I2C
+            self.enabled = True
 
     ## Disable the sensor.
     # This may save some battery power when the sensor is not in use.
     def deactivate(self):
-        self.control_pin.value(0)
+        if self.enabled:
+            self.control_pin.value(0)
+            self.enabled = False
 
     ## Get the measured distance.
     # @returns The measured distance in mm or -1 if there was an error.
@@ -111,6 +122,9 @@ class DistanceSensor:
         Returns:
             int: distance in mm
         """
+        # automatically activate if not active
+        self.activate()
+        
         # dist/mm = (upper * 16 + lower) / 16 / 2^shift * 10
         try:
             dist_bytes = self.i2c.readfrom_mem(

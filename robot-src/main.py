@@ -113,7 +113,7 @@ try:
         # nominal action
         target = com.get_target_pos()
         if target:
-            self.control.position_controller.set_position(target)
+            self.control.position_controller.set_position(*target)
         self.control.run()
 
         # exit action

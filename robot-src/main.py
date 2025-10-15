@@ -29,7 +29,7 @@ try:
     button_c = ButtonC()
     battery = Battery()
     leds = RGBLEDs()
-    heartbeat = HeartbeatLED(leds, 4)
+    heartbeat = HeartbeatLED(leds, 4) # front center led
 
     ## items to show in the onboard display menu
     class MenuItems:
@@ -100,27 +100,27 @@ try:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        self.display.clear()
-        self.display.text_line(self.current_state, 1)
-        self.display.text_line(f"T: {con.position_controller.target}", 3)
-        pos = nav.get_position()
-        self.display.text_line(f"C: ({int(pos[0])}, {int(pos[1])})", 5)
+        self.com.run()
 
         # entry action
         if self.current_state != self.last_state:
+            self.display.clear()
+            self.display.text_line(self.current_state, 1)
             self.control.set_mode(control.ControlMode.Position)
 
         # nominal action
         target = com.get_target_pos()
         if target:
             self.control.position_controller.set_position(*target)
+        self.display.text_line(f"T: {con.position_controller.target}", 3)
+        pos = nav.get_position()
+        self.display.text_line(f"C: ({int(pos[0])}, {int(pos[1])})", 5)
         self.control.run()
 
         # exit action
         if self.requested_state:
             self.control.set_mode(control.ControlMode.Inactive)
 
-        self.com.run()
         # finally save current state and apply possible next state
         self.last_state = self.current_state
         if self.requested_state:

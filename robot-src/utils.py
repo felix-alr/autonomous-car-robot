@@ -78,6 +78,7 @@ class HeartbeatLED:
         self.leds.set(self.idx, (0, self.state, 0))
         self.leds.show()
 
+        # fading in and out
         self.state += self.step
         if self.state > self.max:
             self.state = self.max

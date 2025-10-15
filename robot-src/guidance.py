@@ -35,7 +35,7 @@ class GuidanceSetupState:
 class GuidanceStateMachine:
     def __init__(self, per: Perception, nav: Navigation, con: ModeController, com: Communicator):
         self.current_state = GuidanceState.IDLE
-        self.last_state = GuidanceState.EXTERNAL
+        self.last_state = None
         self.requested_state = None
         self.current_setup_state = None
         self.last_setup_state = None

@@ -98,7 +98,7 @@ class Communicator:
     # [repeat for remaining spots ...]
     # end
     #
-    # where each element is on a new line.DeprecationWarning
+    # where each element is on a new line.
     def send_spots(self):
         """send registered parking spots to connected bluetooth device"""
         spots_map = self.nav.get_parking_spots()

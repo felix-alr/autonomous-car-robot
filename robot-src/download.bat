@@ -38,5 +38,8 @@ REM copy pololu library
 cd pololu_3pi_2040_robot
 mpremote cp -r . :pololu_3pi_2040_robot
 
+REM reset after flashing
+mpremote reset
+
 echo done.
 endlocal

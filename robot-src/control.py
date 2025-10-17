@@ -67,7 +67,7 @@ class LineFollower:
     def run(self):
         deviation = self._perception.get_line_deviation()
 
-        THRESHOLD = 2.0
+        THRESHOLD = 50000
         TURNSPEED = 600
         FORWARDSPEED = 600
 

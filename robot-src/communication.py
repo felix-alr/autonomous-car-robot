@@ -74,7 +74,7 @@ class Communicator:
     ## Send registered parking spots to connected bluetooth device.
     #
     # Write all parking spots to the serial connection in the format
-    # 
+    #
     # s
     # <id: int>
     # <x1: int>
@@ -92,11 +92,11 @@ class Communicator:
         self.uart.write(f"s{self.delim}") #  start symbol
         for (id, parking_spot) in spots_map.items():
             self.uart.write(
-                f"{id}{self.delim}" + 
-                f"{int(parking_spot.x1)}{self.delim}" + 
-                f"{int(parking_spot.y1)}{self.delim}" + 
-                f"{int(parking_spot.x2)}{self.delim}" + 
-                f"{int(parking_spot.y2)}{self.delim}" + 
+                f"{id}{self.delim}" +
+                f"{int(parking_spot.x1)}{self.delim}" +
+                f"{int(parking_spot.y1)}{self.delim}" +
+                f"{int(parking_spot.x2)}{self.delim}" +
+                f"{int(parking_spot.y2)}{self.delim}" +
                 f"{int(parking_spot.suitable_for_parking)}{self.delim}"
             )
         self.uart.write(f"end{self.delim}") # end of transmission

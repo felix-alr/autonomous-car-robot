@@ -90,7 +90,7 @@ class HeartbeatLED:
 ## Write data to a local csv file
 class CSVLogger:
     ## Initialize the Logger
-    # @param file the file path of the resulting csv
+    # @param filename the file path of the resulting csv
     # @param columns list of all column names
     def __init__(self, filename: str, columns: list[str]):
         """create CSVLogger object

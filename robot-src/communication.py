@@ -14,23 +14,17 @@ from machine import Pin, UART
 from navigation import Navigation, ParkingSpot
 
 
-class Mode:
-    LISTENER = 1
-    READER = 2
-
-
 ## Class to implement the serial bluetooth communication.
 class Communicator:
     def __init__(self, nav: Navigation):
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
         self.nav = nav
-        self.mode = Mode.LISTENER
         self.buf = ""
         self.bindings = {}
         self.delim = "\r\n"
         self.target_pos: tuple[int, int] | None = None
 
-        self.println("HSAR2-Robot TUD-EuI 2025")
+        self.println("HSAR-Robot TUD-EuI 2025")
 
     ## Register multiple key - callback bindings from a dictionary.
     #
@@ -54,22 +48,15 @@ class Communicator:
     def unbind(self, key: str):
         self.bindings.pop(key)
 
-    def set_mode(self, mode: Mode):
-        self.buf = ""
-        self.mode = mode
 
     ## Process incoming data and possibly invoke a registered callback.
     def run(self):
-        if self.mode == Mode.LISTENER:
-            if self.uart.any():
-                # this will error with invalid input!
-                char = self.uart.read(1).decode("utf-8", "strict")[0]
-                if char in self.bindings:
-                    self.bindings[char]()
+        if self.uart.any():
+            # this will error with invalid input!
+            char = self.uart.read(1).decode("utf-8", "strict")[0]
+            if char in self.bindings:
+                self.bindings[char]()
 
-        elif self.mode == Mode.READER:
-            # todo: is this functionality still necessary?
-            pass
 
     ## Print a line of text to the connected device.
     #

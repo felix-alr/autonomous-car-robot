@@ -35,6 +35,7 @@ class AvgFilter:
         return weighted_sum / self.size
 
 
+## Filter for calculating the angular speeds of the wheels.
 class WheelSpeedFilter:
     def __init__(self, encoders: robot.Encoders):
         self.encoders = encoders
@@ -135,6 +136,7 @@ class DistanceSensor:
             return -1
 
 
+## Main class of the perception module exposing the interface to other modules.
 class Perception:
     def __init__(self):
         self.encoders = robot.Encoders()

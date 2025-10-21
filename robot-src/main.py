@@ -102,8 +102,8 @@ try:
         self.navigation.update()
         self.com.run()
 
-        # entry action
         if self.current_state != self.last_state:
+            # entry action
             self.display.clear()
             self.display.text_line(self.current_state, 1)
             self.control.set_mode(control.ControlMode.Position)
@@ -117,8 +117,8 @@ try:
         self.display.text_line(f"C: ({int(pos[0])}, {int(pos[1])})", 5)
         self.control.run()
 
-        # exit action
-        if self.requested_state:
+        if self.requested_state and self.requested_state != "Position_Control":
+            # exit action
             self.control.set_mode(control.ControlMode.Inactive)
 
         # finally save current state and apply possible next state
@@ -126,6 +126,7 @@ try:
         if self.requested_state:
             self.current_state = self.requested_state
             self.requested_state = None
+            self.last_state = None
             # restore original run when exiting from position control
             guidance.GuidanceStateMachine.run = _gui_run_fp
 

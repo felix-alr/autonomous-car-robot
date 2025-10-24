@@ -4,9 +4,9 @@ HSAR Robot           {#mainpage}
 ## About this Documentation
 
 This documentation aims to explain the example project for the HSAR seminar.
-The code is meant to be continously expanded in order to fulfill all tasks of the robot, but you can modify everything as you seem fit to meet the requirements.
+The code is meant to be continuously expanded in order to fulfill all tasks of the robot, but you can modify everything as you seem fit to meet the requirements.
 To help with getting development started, the principal structure of the codebase has been laid out and
-some functionality, like bluetooth communication, is sufficiently implemented.
+some functionality, like Bluetooth communication, is sufficiently implemented.
 
 Documentation of code components is compiled directly from the source code with doxygen.
 

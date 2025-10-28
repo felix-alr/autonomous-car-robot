@@ -1,5 +1,6 @@
 ## @package perception
 #REMOVED
+#Wieso soll das alles nicht funktionieren
 # Module to evaluate sensor inputs and provide necessary measurements for the other modules.
 import time
 import machine

@@ -78,13 +78,14 @@
             android:orientation="horizontal">
 
             <!-- Links-Button -->
+
+            <!-- Rückwärts-Button -->
             <Button
                 android:id="@+id/buttonLeft"
                 android:layout_width="80dp"
                 android:layout_height="80dp"
                 android:text="←" />
 
-            <!-- Rückwärts-Button -->
             <Button
                 android:id="@+id/buttonBackward"
                 android:layout_width="80dp"

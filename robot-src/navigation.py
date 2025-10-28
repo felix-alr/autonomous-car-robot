@@ -1,6 +1,6 @@
 ## @package navigation
 #
-# REMOVED
+# REMOVED ist hier der Chef
 # Module to implement localization of the robot and parking spot detection.
 from math import sin, cos, atan2, sqrt, pi
 import time

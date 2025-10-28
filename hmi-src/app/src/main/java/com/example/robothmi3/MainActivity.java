@@ -1,3 +1,4 @@
+// REMOVED
 package com.example.robothmi3;
 
 import android.Manifest;

@@ -121,6 +121,7 @@ class ParkingSpot:
 ## Class implementing all of the navigation functionality.
 class Navigation:
     def __init__(self, per: Perception):
+        self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
         self.per = per
         self.pose = Pose()
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
@@ -151,6 +152,7 @@ class Navigation:
     # Should be periodically called in the main state machine.
     def update(self):
         self.pose_filter.update()
+        self.scan_parking_spots()
 
         # Add further function calls to be executed here.
 
@@ -171,6 +173,13 @@ class Navigation:
     ## Return the ParkingSpot of a matching id.
     def get_parking_spot(self, id: int) -> ParkingSpot:
         return self.parking_spots[id]
+    
+    def print_parking_spot(self, id: int):
+        ps = self.get_parking_spot(id)
+        return(ps.x1, ps.y1, ps.x2, ps.y2, ps.suitable_for_parking)
+    
+    def print_pose(self, pose: Pose):
+        return(pose.x, pose.y, pose.phi)
 
     ## Reset the module to assert the robot is located in the starting pose.
     def reset(self):
@@ -184,4 +193,22 @@ class Navigation:
 
     ## Scan for available parking spots on the side.
     def scan_parking_spots(self):
-        pass
+        if self.per.get_distance() > 150 and self.has_parkingspot == False:
+            self.has_parkingspot = True
+            self.pose_start = Pose(self.pose.x, self.pose.y, self.pose.phi)
+        
+        if self.per.get_distance() <= 150 and self.has_parkingspot == True:
+            self.has_parkingspot = False 
+            self.pose_stop = Pose(self.pose.x, self.pose.y, self.pose.phi)
+            a = math.sqrt((self.pose_stop.x - self.pose_start.x)**2 + (self.pose_stop.y - self.pose_start.y)**2)
+            phi = abs(self.pose_start.phi - self.pose_stop.phi)
+
+            if a > 50 and phi < 30:
+                new_id = len(self.parking_spots)+1
+
+                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_stop.x, self.pose_stop.y, True)
+
+                self.parking_spots[new_id] = spot
+
+  
+        return 

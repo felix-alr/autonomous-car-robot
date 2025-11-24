@@ -193,22 +193,37 @@ class Navigation:
 
     ## Scan for available parking spots on the side.
     def scan_parking_spots(self):
-        if self.per.get_distance() > 150 and self.has_parkingspot == False:
+        if self.per.get_distance() > 150 and self.has_parkingspot == False: #Trigger for start_pose  
             self.has_parkingspot = True
-            self.pose_start = Pose(self.pose.x, self.pose.y, self.pose.phi)
+            self.pose_start = Pose(self.pose.x, self.pose.y, self.pose.phi) # safe start pose 
         
-        if self.per.get_distance() <= 150 and self.has_parkingspot == True:
+        if self.per.get_distance() <= 150 and self.has_parkingspot == True: # Trigger for end_pose 
             self.has_parkingspot = False 
-            self.pose_stop = Pose(self.pose.x, self.pose.y, self.pose.phi)
-            a = math.sqrt((self.pose_stop.x - self.pose_start.x)**2 + (self.pose_stop.y - self.pose_start.y)**2)
-            phi = abs(self.pose_start.phi - self.pose_stop.phi)
+            self.pose_end = Pose(self.pose.x, self.pose.y, self.pose.phi)   # safe end pose 
+            a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
+            phi = abs(self.pose_start.phi - self.pose_end.phi)  # calculating angle between two points to filter out the corners
 
-            if a > 50 and phi < 30:
-                new_id = len(self.parking_spots)+1
+            if a > 50 and phi < 30: # checking if it is real parkingspot
+                new_id = len(self.parking_spots)+1  # new id for new parkingslot
 
-                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_stop.x, self.pose_stop.y, True)
+                if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
 
-                self.parking_spots[new_id] = spot
+                    if self.pose_start.x - self.pose_end.x < 0: 
+                        self.pose_start.y = 200 # sets the y-value to a fixed preset value (line on map)
+                        self.pose_end.y = 200
 
+
+                if abs(self.pose_start.x - self.pose_end.x) < abs(self.pose_start.y - self.pose_end.y): #checking if parking spot is on the y side (right or left)
+                    if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map
+                        self.pose_start.x = 900     # set the x-value to a fixed preset value (line on map)
+                        self.pose_end.x = 900
+                    
+                    if self.pose_start.y - self.pose_end.y > 0: #checking if the parking-spot is on the left side of map
+                        self.pose_start.x = -100    # set the x-value to a fixed preset value (line on map)
+                        self.pose_end.x = -100       
+                     
+                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, True)    #creating new spot
+
+                self.parking_spots[new_id] = spot   #adding to dict
   
         return 

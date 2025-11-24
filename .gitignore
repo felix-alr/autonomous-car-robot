@@ -7,6 +7,6 @@
 *.log
 *__pycache__/
 *.idea/*
-robot-docs/output/
+robot_docs/output/
 pyproject.toml
 .python-version

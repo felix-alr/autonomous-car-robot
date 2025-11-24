@@ -154,9 +154,21 @@ class Navigation:
 
         # Add further function calls to be executed here.
 
+    # set_pose to a fixed vatue (Eckenflag)
+    def set_pose(self, x:float, y:float, phi:float):
+        self.pose.x = x
+        self.pose.y = y
+        self.pose.phi = phi
+        # Synchronize the stored encoder counts with the current hardware values 
+        # to prevent a false position jump after manually setting the robot pose
+        self.pose_filter.last_counts_left, self.pose_filter.last_counts_right = self.per.encoders.get_counts() 
+
     ## Return the current Pose.
     def get_pose(self) -> Pose:
         return self.pose
+    
+    def print_pose(self):
+        return self.pose.x , self.pose.y , self.pose.phi
 
     ## Return the current position.
     #

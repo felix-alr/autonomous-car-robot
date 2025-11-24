@@ -65,53 +65,51 @@ class LineFollower:
         self._motors = motors
         self._perception = perception
 
-        #PD Parameters: TUNE
-        self.kp = 0.01 # Proportional part
-        self.kd = 0.1 #Derivative variable
+        # PD gains (tune as needed)
+        self.kp = 10000.0
+        self.kd = 0.01
+        self.dt = 0.01
+        self.prev_e = 0
 
-        self.dt = 0.05 #SAMPLETIME = 50000 us
-        self.prev_e = 0 #Previous error
+        # Base forward PWM
+        self.duty_cycle = 0.50
+        self.v0 = 600 * self.duty_cycle  # PWM
 
-        self.duty_cycle = 0.50 # Duty cycle of PWM of 50%
-        self._wheelr = (parameters.ROBOT_WHEEL_RADIUS)/1000 #m
-        self._wheeld = (parameters.ROBOT_WHEEL_DISTANCE)/1000 #m
-
-
+        # Maximum fraction of v0 to use for steering
+        self.max_steer_fraction = 0.35  # never more than 50% of v0
 
     def run(self):
-        error = self.perception.get_line_deviation()
+        # 1) Get line deviation in radians
+        error = self._perception.get_line_deviation()
 
-        #Implementation of the PD
-        der1 = (error-self.prev_e)/self.dt
+        # 2) Derivative
+        derr = (error - self.prev_e) / self.dt
 
-        #Control unit 
-        ctrl = (der1*self.kd)+ (self.kp*error) #Kd*s + kp
+        # 3) PD output in radians
+        ctrl = self.kp * error + self.kd * derr
 
-        #limit to prevent saturation
-        #Assumptions/ estimate for motors max values
-        #Gear ratio 75:1 - 87 rpm for pololulu motors
-        f = 87/60 #rpm/60s
-        maxw_w=2*math.pi*f #2pi*f
-        maxv_w = maxw_w*self._wheelr #w*r
+        # 4) Convert to PWM steering
+        STEER_GAIN = 1000  # start small, tune later
+        w = ctrl * STEER_GAIN
 
-        max_wr = (2*maxv_w)/self._wheeld # 2v/d
-        w = 0.8*max(min(ctrl, max_wr), -max_wr) # signal to send to the actuators
-        #0.8 used for safety factor
+        # 5) Cap steering to a fraction of forward speed
+        max_w = self.v0 * self.max_steer_fraction
+        w = max(min(w, max_w), -max_w)
 
-        #MAX SPEED = 0.146
-        v0 = 6000*self.duty_cycle #Constant forward speed
+        # 6) Compute motor PWM
+        left = self.v0 - w
+        right = self.v0 + w
 
-        #Constants for the difference bt left and right wheels
-        #Still to look whether its going to be an added or multiplied ctt.
-        cl = 1
-        cr = 1
+        # Clip just in case
+        left = max(min(left, 6000), -6000)
+        right = max(min(right, 6000), -6000)
 
-        left = cl*v0-w
-        right = cr*v0+w
+        # 7) Send to motors
         self._motors.set_speeds(left, right)
 
-        #Update the terms for the error
+        # 8) Store previous error
         self.prev_e = error
+
     
 
 

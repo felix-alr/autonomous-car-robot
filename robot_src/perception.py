@@ -53,17 +53,17 @@ class WheelSpeedFilter:
         now = time.ticks_ms()
 
         #Zeitdifferenz in Sekunden
-        dt= time.ticks_diff(now, self.last_time) /1000.0
-        if dt <= 0:
+        self.dt= time.ticks_diff(now, self.last_time) /1000.0
+        if self.dt <= 0:
             return#Abbruch, falls der Timer nicht stimmt
         #pass
         # Differenz der Encoder counts
-        delta_l = counts_l - self.last_counts_l
-        delta_r = counts_r - self.last_counts_r
+        self.delta_l = counts_l - self.last_counts_l
+        self.delta_r = counts_r - self.last_counts_r
 
         # Winkelgeschwindigkeit in rad/s berechnen
-        self.omega_l = (delta_l / COUNTS_PER_REV) * 2 * 3.14159265 / dt
-        self.omega_r = (delta_r / COUNTS_PER_REV) * 2 * 3.14159265 / dt
+        self.omega_l = (self.delta_l / COUNTS_PER_REV) * 2 * 3.14159265 / self.dt
+        self.omega_r = (self.delta_r / COUNTS_PER_REV) * 2 * 3.14159265 / self.dt
 
         # Gefilterte Werte speichern
         self.filter_left.update(self.omega_l)
@@ -94,7 +94,7 @@ class WheelSpeedFilter:
         s_l = (counts_l / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
         s_r = (counts_r / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
         
-        return s_l - s_r
+        return s_l , s_r
 
 ## Class to model a line sensor to calculate the lateral deviation from
 # the center of the line.
@@ -102,7 +102,7 @@ class PerceptionLineSensor:
     def __init__(self, line_sensors: robot.LineSensors):
         self.line_sensors = line_sensors
         self.weights =[-3000, -1000, 0,1000, 3000] # wichtung der Sensoren übergeben (Sensoren befinden sich in 1 cm und 3 cm Abstand)
-        self.last_diviation =0
+        self.last_deviation =0
 
     def get_raw_data(self) -> list[int, int, int, int, int]:
         """read line sensor raw data
@@ -116,13 +116,32 @@ class PerceptionLineSensor:
         self.line_sensors.calibrate()
 
     ## Get the deviation from the center of the parcours line.
-    def read_line(self):
-        values = self.get_raw_data()#Übertragen damit man mit den Werten arbeiten kann
-
-        if len(values)< 5:
-            return self.last_diviation #sichergehen das auch wirklich aus allen 5 Sensoren die Daten ausgwertet werden, ansonsten gibt er nur 
+    def read_line(self) -> int:
         
-        raise NotImplementedError
+        # 1) Normierte Werte direkt vom Sensor holen (0..1000)
+        values = list(self.line_sensors.read_calibrated())
+
+        total = sum(values)
+        if total < 50:    # Linie verloren
+            return self.last_deviation
+
+        # 2) Gewichtete Summe
+        weighted_sum = 0
+        for v, w in zip(values, self.weights):
+            weighted_sum += v * w
+
+        raw_deviation = weighted_sum // total
+
+        # 3) Low-pass Filter (Glättung)
+        alpha = 0.6   # Glättung
+        deviation = int(alpha * raw_deviation + (1 - alpha) * self.last_deviation)
+
+        # Begrenzung
+        deviation = raw_deviation
+        #max(-3000, min(3000, deviation))
+
+        self.last_deviation = deviation
+        return deviation *100
 
     def read_line_reduced(self) -> int:
         """calculate bad approximation for line deviation
@@ -132,9 +151,6 @@ class PerceptionLineSensor:
         """
         values = self.get_raw_data()
         return (-3000 * values[0] + 3000 * values[-1]) // 2
-
-
-
 
 ## Class to read and control the Sharp GP2Y0E03 triangulation sensor.
 class DistanceSensor:
@@ -214,9 +230,9 @@ class Perception:
         self.line_sensor.calibrate()
 
     ## Get lateral deviation from black line.
-    def get_line_deviation(self):
+    def get_line_deviation(self) -> int:
         # todo students: improve this method
-        return self.line_sensor.read_line_reduced()
+        return self.line_sensor.read_line()
 
     ## Get distance of obstacles to the right of the robot in mm.
     def get_distance(self):
@@ -240,4 +256,4 @@ class Perception:
         s_l = (counts_l / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
         s_r = (counts_r / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
         
-        return s_l - s_r
+        return s_l, s_r

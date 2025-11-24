@@ -1,13 +1,12 @@
 ## @package perception
 #REMOVED
-#Wieso soll das alles nicht funktionieren
 # Module to evaluate sensor inputs and provide necessary measurements for the other modules.
 import time
 import machine
 
 
 from pololu_3pi_2040_robot import robot
-from parameters import COUNTS_PER_REV
+from parameters import COUNTS_PER_REV, ROBOT_WHEEL_RADIUS
 
 
 ## Averaging filter of specified size.
@@ -40,22 +39,70 @@ class AvgFilter:
 class WheelSpeedFilter:
     def __init__(self, encoders: robot.Encoders):
         self.encoders = encoders
+        self.last_counts_l, self.last_counts_r = self.encoders.get_counts()
+        self.last_time =time.ticks_ms()
+        self.omega_l = 0.0
+        self.omega_r =0.0
 
+        #Filter zur Glättung
+        self.filter_left = AvgFilter(5)
+        self.filter_right = AvgFilter(5)
     def update(self):
+        #Aktuelle daten aufnehmen
         counts_l, counts_r = self.encoders.get_counts()
-        pass
+        now = time.ticks_ms()
+
+        #Zeitdifferenz in Sekunden
+        dt= time.ticks_diff(now, self.last_time) /1000.0
+        if dt <= 0:
+            return#Abbruch, falls der Timer nicht stimmt
+        #pass
+        # Differenz der Encoder counts
+        delta_l = counts_l - self.last_counts_l
+        delta_r = counts_r - self.last_counts_r
+
+        # Winkelgeschwindigkeit in rad/s berechnen
+        self.omega_l = (delta_l / COUNTS_PER_REV) * 2 * 3.14159265 / dt
+        self.omega_r = (delta_r / COUNTS_PER_REV) * 2 * 3.14159265 / dt
+
+        # Gefilterte Werte speichern
+        self.filter_left.update(self.omega_l)
+        self.filter_right.update(self.omega_r)
+
+        # Alte Werte aktualisieren
+        self.last_counts_l = counts_l
+        self.last_counts_r = counts_r
+        self.last_time = now
 
     def get_wheel_speed_left(self):
+        return self.filter_left.get_value()
         raise NotImplementedError
 
     def get_wheel_speed_right(self):
+        return self.filter_right.get_value()
         raise NotImplementedError
+    def get_wheel_distance_deviation(self) -> float:
+        """
+        Berechnet die Abweichung der zurückgelegten Strecke der beiden Räder.
+        
+        Returns:
+            float: Abweichung in mm (positiv = linkes Rad weiter, negativ = rechtes Rad weiter)
+        """
+        counts_l, counts_r = self.encoders.get_counts()
+        
+        # Umrechnung Counts -> Strecke
+        s_l = (counts_l / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
+        s_r = (counts_r / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
+        
+        return s_l - s_r
 
 ## Class to model a line sensor to calculate the lateral deviation from
 # the center of the line.
 class PerceptionLineSensor:
     def __init__(self, line_sensors: robot.LineSensors):
         self.line_sensors = line_sensors
+        self.weights =[-3000, -1000, 0,1000, 3000] # wichtung der Sensoren übergeben (Sensoren befinden sich in 1 cm und 3 cm Abstand)
+        self.last_diviation =0
 
     def get_raw_data(self) -> list[int, int, int, int, int]:
         """read line sensor raw data
@@ -70,7 +117,11 @@ class PerceptionLineSensor:
 
     ## Get the deviation from the center of the parcours line.
     def read_line(self):
-        # todo this is to be implemented by students
+        values = self.get_raw_data()#Übertragen damit man mit den Werten arbeiten kann
+
+        if len(values)< 5:
+            return self.last_diviation #sichergehen das auch wirklich aus allen 5 Sensoren die Daten ausgwertet werden, ansonsten gibt er nur 
+        
         raise NotImplementedError
 
     def read_line_reduced(self) -> int:
@@ -81,6 +132,8 @@ class PerceptionLineSensor:
         """
         values = self.get_raw_data()
         return (-3000 * values[0] + 3000 * values[-1]) // 2
+
+
 
 
 ## Class to read and control the Sharp GP2Y0E03 triangulation sensor.
@@ -174,3 +227,17 @@ class Perception:
     # @returns True if in corner
     def get_corner(self) -> bool:
         return False
+    def get_wheel_distance_deviation(self) -> float:
+        """
+        Berechnet die Abweichung der zurückgelegten Strecke der beiden Räder.
+        
+        Returns:
+            float: Abweichung in mm (positiv = linkes Rad weiter, negativ = rechtes Rad weiter)
+        """
+        counts_l, counts_r = self.encoders.get_counts()
+        
+        # Umrechnung Counts -> Strecke
+        s_l = (counts_l / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
+        s_r = (counts_r / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
+        
+        return s_l - s_r

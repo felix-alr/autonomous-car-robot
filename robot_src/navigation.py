@@ -122,6 +122,7 @@ class ParkingSpot:
 class Navigation:
     def __init__(self, per: Perception):
         self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
+        self.parking_spot_size = 210
         self.per = per
         self.pose = Pose()
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
@@ -212,6 +213,10 @@ class Navigation:
                         self.pose_start.y = 200 # sets the y-value to a fixed preset value (line on map)
                         self.pose_end.y = 200
 
+                    if abs(self.pose_start.x - self.pose_end.x)> self.parking_spot_size:    #checking if parking-spot is big enough 
+                        self.has_size = True    
+                    else: 
+                        self.has_size = False
 
                 if abs(self.pose_start.x - self.pose_end.x) < abs(self.pose_start.y - self.pose_end.y): #checking if parking spot is on the y side (right or left)
                     if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map
@@ -220,9 +225,14 @@ class Navigation:
                     
                     if self.pose_start.y - self.pose_end.y > 0: #checking if the parking-spot is on the left side of map
                         self.pose_start.x = -100    # set the x-value to a fixed preset value (line on map)
-                        self.pose_end.x = -100       
+                        self.pose_end.x = -100    
+
+                    if abs(self.pose_start.y - self.pose_end.y) > self.parking_spot_size:   #checking if parking spot is big enough
+                        self.has_size = True
+                    else:
+                        self.has_size = False
                      
-                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, True)    #creating new spot
+                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size)    #creating new spot
 
                 self.parking_spots[new_id] = spot   #adding to dict
   

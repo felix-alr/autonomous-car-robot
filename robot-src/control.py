@@ -7,7 +7,8 @@ import time
 
 from perception import Perception
 from navigation import Navigation
-
+import parameters
+import math
 
 ## Enum for modes of the ModeController, that is the different specific control algorithms.
 class ControlMode:
@@ -64,19 +65,54 @@ class LineFollower:
         self._motors = motors
         self._perception = perception
 
+        #PD Parameters: TUNE
+        self.kp = 0.01 # Proportional part
+        self.kd = 0.1 #Derivative variable
+
+        self.dt = 0.05 #SAMPLETIME = 50000 us
+        self.prev_e = 0 #Previous error
+
+        self.duty_cycle = 0.50 # Duty cycle of PWM of 50%
+        self._wheelr = (parameters.ROBOT_WHEEL_RADIUS)/1000 #m
+        self._wheeld = (parameters.ROBOT_WHEEL_DISTANCE)/1000 #m
+
+
+
     def run(self):
-        deviation = self._perception.get_line_deviation()
+        error = self.perception.get_line_deviation()
 
-        THRESHOLD = 50000
-        TURNSPEED = 600
-        FORWARDSPEED = 600
+        #Implementation of the PD
+        der1 = (error-self.prev_e)/self.dt
 
-        if deviation >= THRESHOLD:
-            self._motors.set_speeds(FORWARDSPEED + TURNSPEED, FORWARDSPEED - TURNSPEED)
-        elif deviation <= -THRESHOLD:
-            self._motors.set_speeds(FORWARDSPEED - TURNSPEED, FORWARDSPEED + TURNSPEED)
-        else:
-            self._motors.set_speeds(FORWARDSPEED, FORWARDSPEED)
+        #Control unit 
+        ctrl = (der1*self.kd)+ (self.kp*error) #Kd*s + kp
+
+        #limit to prevent saturation
+        #Assumptions/ estimate for motors max values
+        #Gear ratio 75:1 - 87 rpm for pololulu motors
+        f = 87/60 #rpm/60s
+        maxw_w=2*math.pi*f #2pi*f
+        maxv_w = maxw_w*self._wheelr #w*r
+
+        max_wr = (2*maxv_w)/self._wheeld # 2v/d
+        w = 0.8*max(min(ctrl, max_wr), -max_wr) # signal to send to the actuators
+        #0.8 used for safety factor
+
+        #MAX SPEED = 0.146
+        v0 = 6000*self.duty_cycle #Constant forward speed
+
+        #Constants for the difference bt left and right wheels
+        #Still to look whether its going to be an added or multiplied ctt.
+        cl = 1
+        cr = 1
+
+        left = cl*v0-w
+        right = cr*v0+w
+        self._motors.set_speeds(left, right)
+
+        #Update the terms for the error
+        self.prev_e = error
+    
 
 
 ## Controller to attain a given movement of forward speed and turning rate.

@@ -8,6 +8,7 @@ import time
 from perception import Perception
 from navigation import Navigation
 
+MEDIUM_WHEEL_BASE = 85 # Medium wheel base in mm
 
 ## Enum for modes of the ModeController, that is the different specific control algorithms.
 class ControlMode:
@@ -16,6 +17,8 @@ class ControlMode:
     Path = "Path"
     Position = "Position"
     Inactive = "Inactive"
+
+
 
 
 ## Main Controller to wrap all control tasks.
@@ -90,6 +93,19 @@ class KinematicController:
         self.manual_sensitivity_fwd = 100
         self.manual_sensitivity_rot = 50
 
+        self.prevT = 0
+        self.initialT = 0
+
+        # PI parameters
+        self.Kp = 1
+        self.Ki = 0
+
+        self.iLeft = 0
+        self.iRight = 0
+
+        self.maxWheelSpeed = 6000
+        self.safetyFactor = 0.8
+
     ## Set movement setpoint.
     #
     # @param v forward speed
@@ -114,9 +130,33 @@ class KinematicController:
         return self.turn_speed
 
     def run(self):
-        self._motors.set_speeds(
-            self.forward_speed + self.turn_speed, self.forward_speed - self.turn_speed
-        )
+        if (self.prevT == 0):
+            self.initialT = time.time_ns()
+            self.prevT = self.initialT
+            return
+
+
+        # Reference speeds
+        refLeft = max(self.forward_speed - (self.turn_speed*MEDIUM_WHEEL_BASE/2), self.safetyFactor * self.maxWheelSpeed)
+        refRight = max(self.forward_speed + (self.turn_speed*MEDIUM_WHEEL_BASE/2), self.safetyFactor * self.maxWheelSpeed)
+
+        eLeft = self._perception.get_wheel_speed_left() - refLeft
+        eRight = self._perception.get_wheel_speed_right() - refRight
+
+        # Calculation of integral part
+        dT = time.time_ns() - self.prevT
+        T = time.time_ns() - self.initialT
+
+        self.iLeft += eLeft*dT
+        self.iRight += eRight*dT
+
+
+        # Manipulated variables
+        mLeft = self.Kp * eLeft + self.Ki * (self.iLeft/T)
+        mRight = self.Kp * eRight + self.Ki * (self.iRight/T)
+
+        self._motors.set_speeds(max(refLeft + mLeft, self.maxWheelSpeed),
+                                max(refRight + mRight, self.maxWheelSpeed))
 
 
 ## Controller to follow a polynomial path between a start and target pose.

@@ -128,7 +128,7 @@ class Navigation:
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key
         self.parking_spots: dict[int, ParkingSpot] = {}
-
+        
         # todo students: define parcours using Line segments!
         # self.parcours = [
         #     Line(...),

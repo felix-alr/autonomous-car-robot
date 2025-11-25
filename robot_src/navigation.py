@@ -135,6 +135,10 @@ class Navigation:
         # ]
         self.parcours: list[Line] = []
 
+        self.corners = [Pose(0,0,0), Pose(300,0,0), Pose(300,300,90)]
+         
+        
+
     ## Return a map of the parcours.
     #
     # @returns the map of the parcours as list of Lines
@@ -151,6 +155,16 @@ class Navigation:
     # Should be periodically called in the main state machine.
     def update(self):
         self.pose_filter.update()
+        # hier noch absichern, dass das nur einmal pro ecke ausgeführt wird!!!!!
+        if self.per.get_corner() == True:
+            min_dist = 9999
+            for element in self.corners:
+                dist = (element.x - self.pose.x)**2 + (element.y - self.pose.y)**2
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_point = element
+            self.set_pose(closest_point.x,closest_point.y, closest_point.phi)
+            
 
         # Add further function calls to be executed here.
 

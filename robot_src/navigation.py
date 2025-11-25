@@ -122,6 +122,7 @@ class ParkingSpot:
 class Navigation:
     def __init__(self, per: Perception):
         self.per = per
+        self.has_flag = False
         self.pose = Pose()
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key
@@ -155,15 +156,20 @@ class Navigation:
     # Should be periodically called in the main state machine.
     def update(self):
         self.pose_filter.update()
-        # hier noch absichern, dass das nur einmal pro ecke ausgeführt wird!!!!!
-        if self.per.get_corner() == True:
-            min_dist = 9999
+        # including flag for corners 
+        if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
+            self.has_flag = True
+            min_dist = 9999   
+            # Iterate through the list and determine which point has the shortest distance to the current position.   
             for element in self.corners:
                 dist = (element.x - self.pose.x)**2 + (element.y - self.pose.y)**2
                 if dist < min_dist:
                     min_dist = dist
                     closest_point = element
             self.set_pose(closest_point.x,closest_point.y, closest_point.phi)
+        #   resets the has_flag variable
+        if self.per.get_corner() == False and self.has_flag == True:
+            self.has_flag = False
             
 
         # Add further function calls to be executed here.

@@ -136,7 +136,14 @@ class Navigation:
         # ]
         self.parcours: list[Line] = []
 
-        self.corners = [Pose(0,0,0), Pose(300,0,0), Pose(300,300,90)]
+        self.corners = [
+            Pose(0,0,-90), 
+            Pose(300,0,0), 
+            Pose(300,300,90),
+            Pose(800,300,0),
+            Pose(800,600,90),
+            Pose(0,600,180),
+            ]
          
         
 

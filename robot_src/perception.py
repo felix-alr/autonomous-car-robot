@@ -4,9 +4,11 @@
 import time
 import machine
 
-
 from pololu_3pi_2040_robot import robot
+from pololu_3pi_2040_robot import imu
 from parameters import COUNTS_PER_REV, ROBOT_WHEEL_RADIUS
+from pololu_3pi_2040_robot import yellow_led
+
 
 
 ## Averaging filter of specified size.
@@ -43,6 +45,8 @@ class WheelSpeedFilter:
         self.last_time =time.ticks_ms()
         self.omega_l = 0.0
         self.omega_r =0.0
+        self.displacement_l =0.0
+        self.displacement_r =0.0
 
         #Filter zur Glättung
         self.filter_left = AvgFilter(5)
@@ -64,6 +68,9 @@ class WheelSpeedFilter:
         # Winkelgeschwindigkeit in rad/s berechnen
         self.omega_l = (self.delta_l / COUNTS_PER_REV) * 2 * 3.14159265 / self.dt
         self.omega_r = (self.delta_r / COUNTS_PER_REV) * 2 * 3.14159265 / self.dt
+
+        self.displacement_l =(self.delta_l/COUNTS_PER_REV)*2 * 3.14159265
+        self.displacement_r =(self.delta_r/COUNTS_PER_REV)*2 * 3.14159265
 
         # Gefilterte Werte speichern
         self.filter_left.update(self.omega_l)
@@ -137,7 +144,7 @@ class PerceptionLineSensor:
         deviation = int(alpha * raw_deviation + (1 - alpha) * self.last_deviation)
 
         # Begrenzung
-        deviation = raw_deviation
+        #deviation = raw_deviation
         #max(-3000, min(3000, deviation))
 
         self.last_deviation = deviation
@@ -214,11 +221,16 @@ class Perception:
         self.wheel_speed_filter = WheelSpeedFilter(self.encoders)
         self.distance_sensor = DistanceSensor()
         self.imu = robot.IMU()
+        #self.csv_logger = CSVLogger("corner_log.csv", ["timestamp","left_speed","right_speed","z_angle","corner_detected"])
         self.imu.enable_default()
+        self.led_corner = yellow_led.YellowLED()
+        self._last_time_gyro = time.ticks_ms()
+        self._integrated_z_angle = 0.0 #°
 
     ## Run all update routines of the perception module.
     def update(self):
         self.wheel_speed_filter.update()
+        self.get_corner()
 
     def get_wheel_speed_left(self):
         return self.wheel_speed_filter.get_wheel_speed_left()
@@ -242,7 +254,39 @@ class Perception:
     #
     # @returns True if in corner
     def get_corner(self) -> bool:
-        return False
+        left_speed = self.wheel_speed_filter.get_wheel_speed_left()
+        right_speed= self.wheel_speed_filter.get_wheel_speed_right()
+        self.imu.read()
+
+        SPEED_DIFF_THRESHOLD = 2.0
+
+        speed_diff = abs(left_speed - right_speed)
+        wheel_turning = speed_diff > SPEED_DIFF_THRESHOLD
+
+        now = time.ticks_ms()
+        dt = time.ticks_diff(now, self._last_time_gyro)/1000
+        self._last_time_gyro = now
+
+        self.imu.gyro.read()
+        gz = self.imu.gyro.last_reading_dps[2] # Z-Achse
+
+        self._integrated_z_angle += gz * dt #°
+
+        ROTATIONAL_THRESHOLD = 25 # 25° Änderung zwischen zwei messungen erwwartet
+
+        corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD
+
+        if corner_detected:
+            #self.led_corner.on()#LED anschalten
+            self._integrated_z_angle =0.0
+
+            return True     
+        else:
+            #self.led_corner.off()#LED wieder ausschalten
+            return False 
+        
+        
+
     def get_wheel_distance_deviation(self) -> float:
         """
         Berechnet die Abweichung der zurückgelegten Strecke der beiden Räder.
@@ -256,4 +300,63 @@ class Perception:
         s_l = (counts_l / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
         s_r = (counts_r / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
         
-        return s_l, s_r
+        return s_l- s_r
+    
+    def test_gyro_loop(self):
+        import time
+
+        print("Initialisiere IMU...")
+        self.imu.enable_default()   # 🔥 WICHTIG!
+        time.sleep(0.1)
+
+        print("Starte Gyroskop-Test... STRG+C zum Stoppen\n")
+
+        try:
+            while True:
+                self.imu.read()  # aktualisiert gyro, acc, mag
+
+                gx, gy, gz = self.imu.gyro.last_reading_dps
+
+                print("Gyro (dps) | X: {:7.2f}   Y: {:7.2f}   Z: {:7.2f}".format(
+                    gx, gy, gz
+                ))
+
+                time.sleep_ms(50)
+
+        except KeyboardInterrupt:
+            print("Test beendet.")
+
+
+    def test_mag_loop(self):
+        import time
+        import math
+
+        print("Initialisiere IMU...")
+        self.imu.enable_default()
+        time.sleep(0.1)
+
+        print("Starte Magnetometer-Test... STRG+C zum Stoppen\n")
+
+        try:
+            while True:
+                # Magnetometer direkt auslesen
+                mx, my, mz = self.imu.mag.read()   # 🔥 korrekt!
+
+                # Heading berechnen
+                heading = math.degrees(math.atan2(my, mx))
+                if heading < 0:
+                    heading += 360
+
+                print(
+                    "MAG raw | X: {:7d}   Y: {:7d}   Z: {:7d}   Heading: {:6.1f}°"
+                    .format(mx, my, mz, heading)
+                )
+
+                time.sleep_ms(100)
+
+        except KeyboardInterrupt:
+            print("Test beendet.")
+
+
+
+

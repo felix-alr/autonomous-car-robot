@@ -229,7 +229,8 @@ class Perception:
         self._integrated_z_angle = 0.0 #°
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
         self._last_corner_time = 0      # Zeitmarke für den Cooldown
-        self._corner_cooldown = 1000     # Cooldown in ms
+        self._corner_cooldown = 1000   # Cooldown in ms
+        self._corner_detected = False  
 
     ## Run all update routines of the perception module.
     def update(self):
@@ -276,17 +277,23 @@ class Perception:
 
         self._integrated_z_angle += gz * dt #°
 
-        ROTATIONAL_THRESHOLD = 78 # 25° Änderung zwischen zwei messungen erwwartet
+        #self.uart.write(f"diff speed: {speed_diff}\n")
 
-        corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD
+        ROTATIONAL_THRESHOLD_UPPER = 14 # 25° Änderung zwischen zwei messungen erwwartet
+        ROTATIONAL_THRESHOLD_LOWER = 10
+        #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
 
-        if corner_detected == True:
-            self.uart.write("Jetzt")
-            self._integrated_z_angle =0.0
-            return True     
-        else:
-            #self.led_corner.off()#LED wieder ausschalten
-            return False 
+        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER:
+            self.uart.write("Jetzt  ")
+            self._corner_detected = True
+            #self._integrated_z_angle =0.0
+        elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER:
+            self.uart.write("Nicht mehr\n")
+            self._corner_detected = False
+            #self._integrated_z_angle = 0.0
+          
+        # self._integrated_z_angle =0.0
+        return self._corner_detected
         """
         if corner_detected:
             if time.ticks_diff(now, self._last_corner_time) > self._corner_cooldown:
@@ -318,7 +325,7 @@ class Perception:
         import time
 
         print("Initialisiere IMU...")
-        self.imu.enable_default()   # 🔥 WICHTIG!
+        self.imu.enable_default()   #  WICHTIG!
         time.sleep(0.1)
 
         print("Starte Gyroskop-Test... STRG+C zum Stoppen\n")
@@ -368,6 +375,7 @@ class Perception:
 
         except KeyboardInterrupt:
             print("Test beendet.")
+
 
 
 

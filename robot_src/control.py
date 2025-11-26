@@ -66,48 +66,42 @@ class LineFollower:
         self._perception = perception
 
         # PD gains (tune as needed)
-        self.kp = 10000.0
-        self.kd = 0.01
-        self.dt = 0.01
+        #Actual 'functional' values
+        self.kp = 0.006
+        self.kd = 0.0000002
+
+        self.dt = 0.05
         self.prev_e = 0
 
         # Base forward PWM
-        self.duty_cycle = 0.50
-        self.v0 = 600 * self.duty_cycle  # PWM
-
-        # Maximum fraction of v0 to use for steering
-        self.max_steer_fraction = 0.35  # never more than 50% of v0
-
+        self.duty_cycle = 0.12
+        self.v0 = 6000 * self.duty_cycle  # PWM
+        self.ctrl = 0 
+    
     def run(self):
-        # 1) Get line deviation in radians
-        error = self._perception.get_line_deviation()
+        # Get line deviation in mm
 
-        # 2) Derivative
-        derr = (error - self.prev_e) / self.dt
+        ## As the reference = 0, the error would be -(deviation).
+        error= -self._perception.get_line_deviation()
+        der = (error - self.prev_e) / self.dt #mm/s
 
-        # 3) PD output in radians
-        ctrl = self.kp * error + self.kd * derr
+        # PD output in mm/s : w
+        self.ctrl = self.kp * error + self.kd * der
 
-        # 4) Convert to PWM steering
-        STEER_GAIN = 1000  # start small, tune later
-        w = ctrl * STEER_GAIN
 
-        # 5) Cap steering to a fraction of forward speed
-        max_w = self.v0 * self.max_steer_fraction
-        w = max(min(w, max_w), -max_w)
+        # Motor PWM
+        left = self.v0 - self.ctrl
+        right = self.v0 + self.ctrl
 
-        # 6) Compute motor PWM
-        left = self.v0 - w
-        right = self.v0 + w
+        # Clip just in case, use safety factor
+        safe = 0.9
+        left = max(min(left, 6000* safe), -6000*safe)
+        right = max(min(right, 6000*safe), -6000*safe)
 
-        # Clip just in case
-        left = max(min(left, 6000), -6000)
-        right = max(min(right, 6000), -6000)
-
-        # 7) Send to motors
+        # Send to motors
         self._motors.set_speeds(left, right)
 
-        # 8) Store previous error
+        # Store previous error
         self.prev_e = error
 
     

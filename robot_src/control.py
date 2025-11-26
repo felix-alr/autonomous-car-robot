@@ -146,13 +146,13 @@ class KinematicController:
 
     def run(self):
         if self.debug:
-        if self.start:
-            if self.apPrevT + 500000000 < time.time_ns():
-                if self.forward_speed >= -3000 and not self.stop:
-                    self.forward_speed -= 500
-                    self.apPrevT = time.time_ns()
-                else:
-                    self.start = False
+            if self.start:
+                if self.apPrevT + 500000000 < time.time_ns():
+                    if self.forward_speed >= -3000 and not self.stop:
+                        self.forward_speed -= 500
+                        self.apPrevT = time.time_ns()
+                    else:
+                        self.start = False
         if not self.start:
             if (self.forward_speed >= 3000):
                 self.forward_speed = 0

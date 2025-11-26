@@ -7,7 +7,8 @@ import time
 
 from perception import Perception
 from navigation import Navigation
-
+import parameters
+import math
 
 ## Enum for modes of the ModeController, that is the different specific control algorithms.
 class ControlMode:
@@ -64,19 +65,52 @@ class LineFollower:
         self._motors = motors
         self._perception = perception
 
+        # PD gains (tune as needed)
+        self.kp = 10000.0
+        self.kd = 0.01
+        self.dt = 0.01
+        self.prev_e = 0
+
+        # Base forward PWM
+        self.duty_cycle = 0.50
+        self.v0 = 600 * self.duty_cycle  # PWM
+
+        # Maximum fraction of v0 to use for steering
+        self.max_steer_fraction = 0.35  # never more than 50% of v0
+
     def run(self):
-        deviation = self._perception.get_line_deviation()
+        # 1) Get line deviation in radians
+        error = self._perception.get_line_deviation()
 
-        THRESHOLD = 50000
-        TURNSPEED = 600
-        FORWARDSPEED = 600
+        # 2) Derivative
+        derr = (error - self.prev_e) / self.dt
 
-        if deviation >= THRESHOLD:
-            self._motors.set_speeds(FORWARDSPEED + TURNSPEED, FORWARDSPEED - TURNSPEED)
-        elif deviation <= -THRESHOLD:
-            self._motors.set_speeds(FORWARDSPEED - TURNSPEED, FORWARDSPEED + TURNSPEED)
-        else:
-            self._motors.set_speeds(FORWARDSPEED, FORWARDSPEED)
+        # 3) PD output in radians
+        ctrl = self.kp * error + self.kd * derr
+
+        # 4) Convert to PWM steering
+        STEER_GAIN = 1000  # start small, tune later
+        w = ctrl * STEER_GAIN
+
+        # 5) Cap steering to a fraction of forward speed
+        max_w = self.v0 * self.max_steer_fraction
+        w = max(min(w, max_w), -max_w)
+
+        # 6) Compute motor PWM
+        left = self.v0 - w
+        right = self.v0 + w
+
+        # Clip just in case
+        left = max(min(left, 6000), -6000)
+        right = max(min(right, 6000), -6000)
+
+        # 7) Send to motors
+        self._motors.set_speeds(left, right)
+
+        # 8) Store previous error
+        self.prev_e = error
+
+    
 
 
 ## Controller to attain a given movement of forward speed and turning rate.

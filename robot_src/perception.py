@@ -4,6 +4,7 @@
 import time
 import machine
 
+from machine import Pin,UART
 from pololu_3pi_2040_robot import robot
 from pololu_3pi_2040_robot import imu
 from parameters import COUNTS_PER_REV, ROBOT_WHEEL_RADIUS
@@ -226,6 +227,9 @@ class Perception:
         self.led_corner = yellow_led.YellowLED()
         self._last_time_gyro = time.ticks_ms()
         self._integrated_z_angle = 0.0 #°
+        self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
+        self._last_corner_time = 0      # Zeitmarke für den Cooldown
+        self._corner_cooldown = 1000     # Cooldown in ms
 
     ## Run all update routines of the perception module.
     def update(self):
@@ -258,7 +262,7 @@ class Perception:
         right_speed= self.wheel_speed_filter.get_wheel_speed_right()
         self.imu.read()
 
-        SPEED_DIFF_THRESHOLD = 2.0
+        SPEED_DIFF_THRESHOLD = 1.0 # eigentlich 2
 
         speed_diff = abs(left_speed - right_speed)
         wheel_turning = speed_diff > SPEED_DIFF_THRESHOLD
@@ -272,20 +276,28 @@ class Perception:
 
         self._integrated_z_angle += gz * dt #°
 
-        ROTATIONAL_THRESHOLD = 25 # 25° Änderung zwischen zwei messungen erwwartet
+        ROTATIONAL_THRESHOLD = 78 # 25° Änderung zwischen zwei messungen erwwartet
 
         corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD
 
-        if corner_detected:
-            #self.led_corner.on()#LED anschalten
+        if corner_detected == True:
+            self.uart.write("Jetzt")
             self._integrated_z_angle =0.0
-
             return True     
         else:
             #self.led_corner.off()#LED wieder ausschalten
             return False 
-        
-        
+        """
+        if corner_detected:
+            if time.ticks_diff(now, self._last_corner_time) > self._corner_cooldown:
+                self._last_corner_time = now       # Cooldown starten
+                self._integrated_z_angle = 0.0       # Angle resetten
+                self.uart.write(f"Jetzt")           # EINMALIG pro Ecke
+                return True
+            else:
+                return False
+
+        return False"""
 
     def get_wheel_distance_deviation(self) -> float:
         """

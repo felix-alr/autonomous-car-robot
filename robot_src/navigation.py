@@ -2,6 +2,11 @@
 #
 # REMOVED ist hier der Chef
 # Module to implement localization of the robot and parking spot detection.
+
+# for communication
+from machine import Pin, UART
+
+
 from math import sin, cos, atan2, sqrt, pi
 import time
 import math
@@ -124,6 +129,9 @@ class Navigation:
         self.per = per
         self.has_flag = False
         self.pose = Pose()
+        #Kommunikation (Test)
+        self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
+
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key
         self.parking_spots: dict[int, ParkingSpot] = {}
@@ -166,14 +174,15 @@ class Navigation:
         # including flag for corners 
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
-            min_dist = 9999   
+            self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
+            """  min_dist = 9999   
             # Iterate through the list and determine which point has the shortest distance to the current position.   
             for element in self.corners:
                 dist = (element.x - self.pose.x)**2 + (element.y - self.pose.y)**2
                 if dist < min_dist:
                     min_dist = dist
                     closest_point = element
-            self.set_pose(closest_point.x,closest_point.y, closest_point.phi)
+            self.set_pose(closest_point.x,closest_point.y, closest_point.phi)   """ # Villeicht muss man den Winkel auch gar nicht mit setzen
         #   resets the has_flag variable
         if self.per.get_corner() == False and self.has_flag == True:
             self.has_flag = False

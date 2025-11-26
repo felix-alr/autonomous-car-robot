@@ -103,14 +103,23 @@ class KinematicController:
         self.initialT = 0
 
         # PI parameters
-        self.Kp = 10
-        self.Ki = 4
+        self.Kp = 0.5
+        self.Ki = 0.3
 
         self.iLeft = 0
         self.iRight = 0
 
         self.maxWheelSpeed = 6000
         self.safetyFactor = 0.8
+
+        # ref, devL, devR, speedL, speedR, deltaSpeed, deltaYMCalc
+        self.data = []
+
+        self.apPrevT = 0
+        self.ap = False
+        self.stop = False
+        self.start = True
+        self.debug = False
 
     ## Set movement setpoint.
     #
@@ -136,6 +145,22 @@ class KinematicController:
         return self.turn_speed
 
     def run(self):
+        if self.debug:
+        if self.start:
+            if self.apPrevT + 500000000 < time.time_ns():
+                if self.forward_speed >= -3000 and not self.stop:
+                    self.forward_speed -= 500
+                    self.apPrevT = time.time_ns()
+                else:
+                    self.start = False
+        if not self.start:
+            if (self.forward_speed >= 3000):
+                self.forward_speed = 0
+                self.stop = True
+            if (self.apPrevT + 400000000 < time.time_ns() and not self.stop):
+                self.increase_v()
+                self.ap = True
+                self.apPrevT = time.time_ns()
         if (self.prevT == 0):
             self.initialT = time.time_ns()
             self.prevT = self.initialT
@@ -149,7 +174,7 @@ class KinematicController:
         eLeft = refLeft - self.yMLeft(self._perception.get_wheel_speed_left())
         eRight = refRight - self.yMRight(self._perception.get_wheel_speed_right())
 
-        uart_int.write(f"Right: (ref: {refRight}, actual: {self._perception.get_wheel_speed_right()}, actual(calc): {self.yMRight(self._perception.get_wheel_speed_right())}, err: {eRight})\nLeft: (ref: {refLeft}, actual: {self._perception.get_wheel_speed_left()}, actual(calc): {self.yMLeft(self._perception.get_wheel_speed_left())}, err: {eLeft})\n\n")
+        #uart_int.write(f"Right: (ref: {refRight}, actual: {self._perception.get_wheel_speed_right()}, actual(calc): {self.yMRight(self._perception.get_wheel_speed_right())}, err: {eRight})\nLeft: (ref: {refLeft}, actual: {self._perception.get_wheel_speed_left()}, actual(calc): {self.yMLeft(self._perception.get_wheel_speed_left())}, err: {eLeft})\n\n")
 
         # Calculation of integral part
         dT = time.time_ns() - self.prevT
@@ -165,21 +190,27 @@ class KinematicController:
         # Manipulated variables
         mLeft = self.Kp * eLeft + self.Ki * (self.iLeft/T)
         mRight = self.Kp * eRight + self.Ki * (self.iRight/T)
+        # refL, refR, devL, devR, speedL, speedR, deltaSpeed, deltaYMCalc
+        speedL = self._perception.get_wheel_speed_left()
+        speedR = self._perception.get_wheel_speed_right()
+        if self.ap:
+            self.ap = False
+            self.data.append([refLeft, eLeft, eRight, speedL, speedR, speedL-speedR, self.yMLeft(speedL), self.yMRight(speedR)])
 
-        self._motors.set_speeds(max(min(mLeft, self.maxWheelSpeed), -self.maxWheelSpeed),
-                                max(min(mRight, self.maxWheelSpeed), -self.maxWheelSpeed))
+        self._motors.set_speeds(max(min(refLeft + mLeft, self.maxWheelSpeed), -self.maxWheelSpeed),
+                                max(min(refRight + mRight, self.maxWheelSpeed), -self.maxWheelSpeed))
 
     def yMRight(self, wheel_speed_right):
-        if wheel_speed_right < -2:
+        if wheel_speed_right < -1:
             return -0.004496663911564471*wheel_speed_right*wheel_speed_right*wheel_speed_right -0.3495643763999523*wheel_speed_right*wheel_speed_right + 53.6919009995278*wheel_speed_right -165.18648593231
-        elif wheel_speed_right > 4:
+        elif wheel_speed_right > 1:
             return 0.00158962537790145*wheel_speed_right*wheel_speed_right*wheel_speed_right - 0.126700243805418*wheel_speed_right*wheel_speed_right + 63.0847083536231*wheel_speed_right + 116.819530102035
         return 0
 
     def yMLeft(self, wheel_speed_left):
-        if wheel_speed_left < -2:
+        if wheel_speed_left < -1:
             return -0.00199006068026202*wheel_speed_left*wheel_speed_left*wheel_speed_left -0.135572309354336*wheel_speed_left*wheel_speed_left + 56.2486786207565*wheel_speed_left -188.22243084817
-        elif wheel_speed_left > 4:
+        elif wheel_speed_left > 1:
             return 0.000609007723240748*wheel_speed_left*wheel_speed_left*wheel_speed_left - 0.0026257455235966*wheel_speed_left*wheel_speed_left + 58.0932190955994*wheel_speed_left + 167.694825200004
         return 0
 

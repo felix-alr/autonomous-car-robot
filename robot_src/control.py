@@ -4,11 +4,14 @@
 
 from pololu_3pi_2040_robot.motors import Motors
 import time
+import parameters
 
 from perception import Perception
 from navigation import Navigation
 
-MEDIUM_WHEEL_BASE = 85 # Medium wheel base in mm
+
+
+from machine import Pin, UART
 
 ## Enum for modes of the ModeController, that is the different specific control algorithms.
 class ControlMode:
@@ -19,7 +22,7 @@ class ControlMode:
     Inactive = "Inactive"
 
 
-
+uart_int = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
 ## Main Controller to wrap all control tasks.
 #
@@ -37,6 +40,8 @@ class ModeController:
         self.path_follower = PathFollower()
         self.position_controller = PositionController()
 
+
+
     ## Select a specific control algorithm.
     #
     # @param mode The control mode to activate.
@@ -53,6 +58,7 @@ class ModeController:
 
         elif self._mode == ControlMode.Line:
             self.line_follower.run()
+
 
         elif self._mode == ControlMode.Path:
             self.path_follower.run()
@@ -91,14 +97,14 @@ class KinematicController:
         self.forward_speed = 0
         self.turn_speed = 0
         self.manual_sensitivity_fwd = 100
-        self.manual_sensitivity_rot = 50
+        self.manual_sensitivity_rot = 5
 
         self.prevT = 0
         self.initialT = 0
 
         # PI parameters
-        self.Kp = 1
-        self.Ki = 0
+        self.Kp = 10
+        self.Ki = 4
 
         self.iLeft = 0
         self.iRight = 0
@@ -137,11 +143,13 @@ class KinematicController:
 
 
         # Reference speeds
-        refLeft = max(self.forward_speed - (self.turn_speed*MEDIUM_WHEEL_BASE/2), self.safetyFactor * self.maxWheelSpeed)
-        refRight = max(self.forward_speed + (self.turn_speed*MEDIUM_WHEEL_BASE/2), self.safetyFactor * self.maxWheelSpeed)
+        refLeft = self.forward_speed - (self.turn_speed*parameters.ROBOT_WHEEL_DISTANCE/2)
+        refRight = self.forward_speed + (self.turn_speed*parameters.ROBOT_WHEEL_DISTANCE/2)
 
-        eLeft = self._perception.get_wheel_speed_left() - refLeft
-        eRight = self._perception.get_wheel_speed_right() - refRight
+        eLeft = refLeft - self.yMLeft(self._perception.get_wheel_speed_left())
+        eRight = refRight - self.yMRight(self._perception.get_wheel_speed_right())
+
+        uart_int.write(f"Right: (ref: {refRight}, actual: {self._perception.get_wheel_speed_right()}, actual(calc): {self.yMRight(self._perception.get_wheel_speed_right())}, err: {eRight})\nLeft: (ref: {refLeft}, actual: {self._perception.get_wheel_speed_left()}, actual(calc): {self.yMLeft(self._perception.get_wheel_speed_left())}, err: {eLeft})\n\n")
 
         # Calculation of integral part
         dT = time.time_ns() - self.prevT
@@ -151,12 +159,29 @@ class KinematicController:
         self.iRight += eRight*dT
 
 
+        self.prevT = time.time_ns()
+
+
         # Manipulated variables
         mLeft = self.Kp * eLeft + self.Ki * (self.iLeft/T)
         mRight = self.Kp * eRight + self.Ki * (self.iRight/T)
 
-        self._motors.set_speeds(max(refLeft + mLeft, self.maxWheelSpeed),
-                                max(refRight + mRight, self.maxWheelSpeed))
+        self._motors.set_speeds(max(min(mLeft, self.maxWheelSpeed), -self.maxWheelSpeed),
+                                max(min(mRight, self.maxWheelSpeed), -self.maxWheelSpeed))
+
+    def yMRight(self, wheel_speed_right):
+        if wheel_speed_right < -2:
+            return -0.004496663911564471*wheel_speed_right*wheel_speed_right*wheel_speed_right -0.3495643763999523*wheel_speed_right*wheel_speed_right + 53.6919009995278*wheel_speed_right -165.18648593231
+        elif wheel_speed_right > 4:
+            return 0.00158962537790145*wheel_speed_right*wheel_speed_right*wheel_speed_right - 0.126700243805418*wheel_speed_right*wheel_speed_right + 63.0847083536231*wheel_speed_right + 116.819530102035
+        return 0
+
+    def yMLeft(self, wheel_speed_left):
+        if wheel_speed_left < -2:
+            return -0.00199006068026202*wheel_speed_left*wheel_speed_left*wheel_speed_left -0.135572309354336*wheel_speed_left*wheel_speed_left + 56.2486786207565*wheel_speed_left -188.22243084817
+        elif wheel_speed_left > 4:
+            return 0.000609007723240748*wheel_speed_left*wheel_speed_left*wheel_speed_left - 0.0026257455235966*wheel_speed_left*wheel_speed_left + 58.0932190955994*wheel_speed_left + 167.694825200004
+        return 0
 
 
 ## Controller to follow a polynomial path between a start and target pose.

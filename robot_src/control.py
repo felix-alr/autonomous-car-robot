@@ -69,7 +69,7 @@ class ModeController:
 
 ## Controller for following the black parcours line.
 class LineFollower:
-    def _init_(self, motors: Motors, perception: Perception):
+    def __init__(self, motors: Motors, perception: Perception):
         self._motors = motors
         self._perception = perception
 

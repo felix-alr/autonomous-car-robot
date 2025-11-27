@@ -279,8 +279,8 @@ class Perception:
 
         #self.uart.write(f"diff speed: {speed_diff}\n")
 
-        ROTATIONAL_THRESHOLD_UPPER = 14 # 25° Änderung zwischen zwei messungen erwwartet
-        ROTATIONAL_THRESHOLD_LOWER = 10
+        ROTATIONAL_THRESHOLD_UPPER = 15 # 25° Änderung zwischen zwei messungen erwwartet
+        ROTATIONAL_THRESHOLD_LOWER = 1.5
         #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
 
         if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER:

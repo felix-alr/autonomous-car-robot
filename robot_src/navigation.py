@@ -145,12 +145,12 @@ class Navigation:
         self.parcours: list[Line] = []
 
         self.corners = [
-            Pose(0,0,-90), 
-            Pose(300,0,0), 
-            Pose(300,300,90),
-            Pose(800,300,0),
-            Pose(800,600,90),
-            Pose(0,600,180),
+            Pose(0,0,0), 
+            Pose(300,0,90), 
+            Pose(300,300,0),
+            Pose(800,300,90),
+            Pose(800,600,180),
+            Pose(0,600,270),
             ]
          
         
@@ -175,17 +175,19 @@ class Navigation:
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
             self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
-            min_dist = 9999   
-            # Iterate through the list and determine which point has the shortest distance to the current position.   
+            min_dist = float('inf')  
+            self.closest_point = None
+               # Iterate through the list and determine which point has the shortest distance to the current position.   
             for element in self.corners:
-                dist = (element.x - self.pose.x)**2 + (element.y - self.pose.y)**2
+                dist = sqrt((element.x - self.pose.x)**2 + (element.y - self.pose.y)**2)
                 if dist < min_dist:
                     min_dist = dist
-                    closest_point = element
-            self.set_pose(closest_point.x,closest_point.y, closest_point.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
+                    self.closest_point = element
+            self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
             self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}\n")
         #   resets the has_flag variable
         if self.per.get_corner() == False and self.has_flag == True:
+            self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
             self.has_flag = False
             
 

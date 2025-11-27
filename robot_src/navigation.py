@@ -245,17 +245,17 @@ class Navigation:
 
     ## Scan for available parking spots on the side.
     def scan_parking_spots(self):
-        if self.per.get_distance() > 150 and self.has_parkingspot == False: #Trigger for start_pose  
+        if self.per.get_distance() > 100 and self.has_parkingspot == False: #Trigger for start_pose  
             self.has_parkingspot = True
             self.pose_start = Pose(self.pose.x, self.pose.y, self.pose.phi) # safe start pose 
         
-        if self.per.get_distance() <= 150 and self.has_parkingspot == True: # Trigger for end_pose 
+        if self.per.get_distance() <= 100 and self.has_parkingspot == True: # Trigger for end_pose 
             self.has_parkingspot = False 
             self.pose_end = Pose(self.pose.x, self.pose.y, self.pose.phi)   # safe end pose 
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
             phi = abs(self.pose_start.phi - self.pose_end.phi)  # calculating angle between two points to filter out the corners
 
-            if a > 50 and phi < 30: # checking if it is real parkingspot
+            if a > 40 and phi < 30: # checking if it is real parkingspot
                 new_id = len(self.parking_spots)+1  # new id for new parkingslot
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 

@@ -9,7 +9,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Check if current directory name is "robot-src"
+REM Check if current directory name is "robot_src"
 for %%d in ("%cd%") do set "CURDIR=%%~nxd"
 
 if /I "%CURDIR%"=="robot_src" (

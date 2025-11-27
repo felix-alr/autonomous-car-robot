@@ -126,6 +126,8 @@ class ParkingSpot:
 ## Class implementing all of the navigation functionality.
 class Navigation:
     def __init__(self, per: Perception):
+        self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
+        self.parking_spot_size = 210
         self.per = per
         self.has_flag = False
         self.pose = Pose()
@@ -135,7 +137,7 @@ class Navigation:
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key
         self.parking_spots: dict[int, ParkingSpot] = {}
-
+        
         # todo students: define parcours using Line segments!
         # self.parcours = [
         #     Line(...),
@@ -171,6 +173,7 @@ class Navigation:
     # Should be periodically called in the main state machine.
     def update(self):
         self.pose_filter.update()
+<<<<<<< HEAD
         # including flag for corners 
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
@@ -190,6 +193,9 @@ class Navigation:
             self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
             self.has_flag = False
             
+=======
+        self.scan_parking_spots()
+>>>>>>> feature/parkingspots
 
         # Add further function calls to be executed here.
 
@@ -222,6 +228,13 @@ class Navigation:
     ## Return the ParkingSpot of a matching id.
     def get_parking_spot(self, id: int) -> ParkingSpot:
         return self.parking_spots[id]
+    
+    def print_parking_spot(self, id: int):
+        ps = self.get_parking_spot(id)
+        return(ps.x1, ps.y1, ps.x2, ps.y2, ps.suitable_for_parking)
+    
+    def print_pose(self, pose: Pose):
+        return(pose.x, pose.y, pose.phi)
 
     ## Reset the module to assert the robot is located in the starting pose.
     def reset(self):
@@ -235,4 +248,46 @@ class Navigation:
 
     ## Scan for available parking spots on the side.
     def scan_parking_spots(self):
-        pass
+        if self.per.get_distance() > 150 and self.has_parkingspot == False: #Trigger for start_pose  
+            self.has_parkingspot = True
+            self.pose_start = Pose(self.pose.x, self.pose.y, self.pose.phi) # safe start pose 
+        
+        if self.per.get_distance() <= 150 and self.has_parkingspot == True: # Trigger for end_pose 
+            self.has_parkingspot = False 
+            self.pose_end = Pose(self.pose.x, self.pose.y, self.pose.phi)   # safe end pose 
+            a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
+            phi = abs(self.pose_start.phi - self.pose_end.phi)  # calculating angle between two points to filter out the corners
+
+            if a > 50 and phi < 30: # checking if it is real parkingspot
+                new_id = len(self.parking_spots)+1  # new id for new parkingslot
+
+                if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
+
+                    if self.pose_start.x - self.pose_end.x < 0: 
+                        self.pose_start.y = 200 # sets the y-value to a fixed preset value (line on map)
+                        self.pose_end.y = 200
+
+                    if abs(self.pose_start.x - self.pose_end.x)> self.parking_spot_size:    #checking if parking-spot is big enough 
+                        self.has_size = True    
+                    else: 
+                        self.has_size = False
+
+                if abs(self.pose_start.x - self.pose_end.x) < abs(self.pose_start.y - self.pose_end.y): #checking if parking spot is on the y side (right or left)
+                    if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map
+                        self.pose_start.x = 900     # set the x-value to a fixed preset value (line on map)
+                        self.pose_end.x = 900
+                    
+                    if self.pose_start.y - self.pose_end.y > 0: #checking if the parking-spot is on the left side of map
+                        self.pose_start.x = -100    # set the x-value to a fixed preset value (line on map)
+                        self.pose_end.x = -100    
+
+                    if abs(self.pose_start.y - self.pose_end.y) > self.parking_spot_size:   #checking if parking spot is big enough
+                        self.has_size = True
+                    else:
+                        self.has_size = False
+                     
+                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size)    #creating new spot
+
+                self.parking_spots[new_id] = spot   #adding to dict
+  
+        return 

@@ -75,8 +75,8 @@ class LineFollower:
 
         # PD gains (tune as needed)
         # Actual 'functional' values
-        self.kp = 0.006
-        self.kd = 0.0000002
+        self.kp = 0.006             
+        self.kd = 0.0000002         
 
         self.dt = 0.05
         self.prev_e = 0

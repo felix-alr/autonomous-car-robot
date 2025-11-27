@@ -173,7 +173,6 @@ class Navigation:
     # Should be periodically called in the main state machine.
     def update(self):
         self.pose_filter.update()
-<<<<<<< HEAD
         # including flag for corners 
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
@@ -193,9 +192,7 @@ class Navigation:
             self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
             self.has_flag = False
             
-=======
         self.scan_parking_spots()
->>>>>>> feature/parkingspots
 
         # Add further function calls to be executed here.
 

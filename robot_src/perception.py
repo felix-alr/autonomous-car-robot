@@ -284,11 +284,11 @@ class Perception:
         #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
 
         if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER:
-            self.uart.write("Jetzt  ")
+            #self.uart.write("Jetzt  ")
             self._corner_detected = True
             #self._integrated_z_angle =0.0
         elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER:
-            self.uart.write("Nicht mehr\n")
+            #self.uart.write("Nicht mehr\n")
             self._corner_detected = False
             #self._integrated_z_angle = 0.0
           

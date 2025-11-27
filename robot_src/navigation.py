@@ -175,14 +175,15 @@ class Navigation:
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
             self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
-            """  min_dist = 9999   
+            min_dist = 9999   
             # Iterate through the list and determine which point has the shortest distance to the current position.   
             for element in self.corners:
                 dist = (element.x - self.pose.x)**2 + (element.y - self.pose.y)**2
                 if dist < min_dist:
                     min_dist = dist
                     closest_point = element
-            self.set_pose(closest_point.x,closest_point.y, closest_point.phi)   """ # Villeicht muss man den Winkel auch gar nicht mit setzen
+            self.set_pose(closest_point.x,closest_point.y, closest_point.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
+            self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}\n")
         #   resets the has_flag variable
         if self.per.get_corner() == False and self.has_flag == True:
             self.has_flag = False

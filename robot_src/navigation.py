@@ -122,7 +122,7 @@ class ParkingSpot:
 class Navigation:
     def __init__(self, per: Perception):
         self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
-        self.parking_spot_size = 210
+        self.parking_spot_size = 180
         self.per = per
         self.pose = Pose()
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)

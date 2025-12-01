@@ -9,6 +9,7 @@ import parameters
 from perception import Perception
 from navigation import Navigation
 
+from control_test import record_test_data
 
 
 from machine import Pin, UART
@@ -97,14 +98,22 @@ class KinematicController:
         self.forward_speed = 0
         self.turn_speed = 0
         self.manual_sensitivity_fwd = 100
-        self.manual_sensitivity_rot = 5
+        self.manual_sensitivity_rot = -5
 
         self.prevT = 0
         self.initialT = 0
 
-        # PI parameters
-        self.Kp = 0.5
-        self.Ki = 0.3
+        self.prevELeft = 0
+        self.prevERight = 0
+
+        # PID parameters
+        self.KpR = 0.5
+        self.KiR = 10
+        self.KdR = 0.5
+
+        self.KpL = 0.5
+        self.KiL = 10
+        self.KdL = 0.5
 
         self.iLeft = 0
         self.iRight = 0
@@ -112,14 +121,13 @@ class KinematicController:
         self.maxWheelSpeed = 6000
         self.safetyFactor = 0.8
 
-        # ref, devL, devR, speedL, speedR, deltaSpeed, deltaYMCalc
-        self.data = []
-
-        self.apPrevT = 0
-        self.ap = False
-        self.stop = False
-        self.start = True
-        self.debug = False
+        # Debugging variables
+        # self.data = [] # [ref, devL, devR, speedL, speedR, deltaSpeed, deltaYMCalc]
+        # self.apPrevT = 0
+        # self.ap = False
+        # self.stop = False
+        # self.start = True
+        # self.debug = False
 
     ## Set movement setpoint.
     #
@@ -145,27 +153,12 @@ class KinematicController:
         return self.turn_speed
 
     def run(self):
-        if self.debug:
-            if self.start:
-                if self.apPrevT + 500000000 < time.time_ns():
-                    if self.forward_speed >= -3000 and not self.stop:
-                        self.forward_speed -= 500
-                        self.apPrevT = time.time_ns()
-                    else:
-                        self.start = False
-        if not self.start:
-            if (self.forward_speed >= 3000):
-                self.forward_speed = 0
-                self.stop = True
-            if (self.apPrevT + 400000000 < time.time_ns() and not self.stop):
-                self.increase_v()
-                self.ap = True
-                self.apPrevT = time.time_ns()
+
+        # PID control loop
         if (self.prevT == 0):
             self.initialT = time.time_ns()
             self.prevT = self.initialT
             return
-
 
         # Reference speeds
         refLeft = self.forward_speed - (self.turn_speed*parameters.ROBOT_WHEEL_DISTANCE/2)
@@ -183,37 +176,34 @@ class KinematicController:
         self.iLeft += eLeft*dT
         self.iRight += eRight*dT
 
-
         self.prevT = time.time_ns()
 
-
         # Manipulated variables
-        mLeft = self.Kp * eLeft + self.Ki * (self.iLeft/T)
-        mRight = self.Kp * eRight + self.Ki * (self.iRight/T)
-        # refL, refR, devL, devR, speedL, speedR, deltaSpeed, deltaYMCalc
-        speedL = self._perception.get_wheel_speed_left()
-        speedR = self._perception.get_wheel_speed_right()
-        if self.ap:
-            self.ap = False
-            self.data.append([refLeft, eLeft, eRight, speedL, speedR, speedL-speedR, self.yMLeft(speedL), self.yMRight(speedR)])
+        mLeft = refLeft + self.KpL * eLeft + self.KiL * (self.iLeft/T) - self.KdL*(eLeft-self.prevELeft)
+        mRight = refRight + self.KpR * eRight + self.KiR * (self.iRight/T) - self.KdR*(eRight-self.prevERight)
 
-        self._motors.set_speeds(max(min(refLeft + mLeft, self.maxWheelSpeed), -self.maxWheelSpeed),
-                                max(min(refRight + mRight, self.maxWheelSpeed), -self.maxWheelSpeed))
+        self.prevELeft = eLeft
+        self.prevERight = eRight
 
+        # Set motor speeds
+        self._motors.set_speeds(max(min(mLeft, self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed),
+                                max(min(mRight, self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed))
+
+    # yM (for the right motor) as a function of right wheel speed
     def yMRight(self, wheel_speed_right):
-        if wheel_speed_right < -1:
+        if wheel_speed_right < 0:
             return -0.004496663911564471*wheel_speed_right*wheel_speed_right*wheel_speed_right -0.3495643763999523*wheel_speed_right*wheel_speed_right + 53.6919009995278*wheel_speed_right -165.18648593231
-        elif wheel_speed_right > 1:
-            return 0.00158962537790145*wheel_speed_right*wheel_speed_right*wheel_speed_right - 0.126700243805418*wheel_speed_right*wheel_speed_right + 63.0847083536231*wheel_speed_right + 116.819530102035
+        elif wheel_speed_right > 0:
+            return wheel_speed_right * 1700/(29.38887) - 300*(29.59929)/1700
         return 0
 
+    # yM (for the left motor) as a function of left wheel speed
     def yMLeft(self, wheel_speed_left):
-        if wheel_speed_left < -1:
+        if wheel_speed_left < -0:
             return -0.00199006068026202*wheel_speed_left*wheel_speed_left*wheel_speed_left -0.135572309354336*wheel_speed_left*wheel_speed_left + 56.2486786207565*wheel_speed_left -188.22243084817
-        elif wheel_speed_left > 1:
-            return 0.000609007723240748*wheel_speed_left*wheel_speed_left*wheel_speed_left - 0.0026257455235966*wheel_speed_left*wheel_speed_left + 58.0932190955994*wheel_speed_left + 167.694825200004
+        elif wheel_speed_left > 0:
+            return wheel_speed_left * 1700/(29.59929-1.052107) - 300*(29.59929-1.052107)/1700
         return 0
-
 
 ## Controller to follow a polynomial path between a start and target pose.
 class PathFollower:

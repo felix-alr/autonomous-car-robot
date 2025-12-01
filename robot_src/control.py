@@ -66,14 +66,14 @@ class LineFollower:
 
         # PD gains (tune as needed)
         # Actual 'functional' values
-        self.kp = 0.006
-        self.kd = 0.0000002
+        self.kp = 0.004
+        self.kd = 0.000000095
 
         self.dt = 0.05
         self.prev_e = 0
 
         # Base forward PWM
-        self.duty_cycle = 0.12
+        self.duty_cycle = 0.13
         self.v0 = 6000 * self.duty_cycle  # PWM
         self.ctrl = 0
 

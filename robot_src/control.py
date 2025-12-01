@@ -58,7 +58,6 @@ class ModeController:
         elif self._mode == ControlMode.Position:
             self.position_controller.run()
 
-
 ## Controller for following the black parcours line.
 class LineFollower:
     def __init__(self, motors: Motors, perception: Perception):
@@ -66,7 +65,7 @@ class LineFollower:
         self._perception = perception
 
         # PD gains (tune as needed)
-        #Actual 'functional' values
+        # Actual 'functional' values
         self.kp = 0.006
         self.kd = 0.0000002
 
@@ -76,18 +75,17 @@ class LineFollower:
         # Base forward PWM
         self.duty_cycle = 0.12
         self.v0 = 6000 * self.duty_cycle  # PWM
-        self.ctrl = 0 
-    
+        self.ctrl = 0
+
     def run(self):
         # Get line deviation in mm
 
         ## As the reference = 0, the error would be -(deviation).
-        error= -self._perception.get_line_deviation()
-        der = (error - self.prev_e) / self.dt #mm/s
+        error = -self._perception.get_line_deviation()
+        der = (error - self.prev_e) / self.dt  # mm/s
 
         # PD output in mm/s : w
         self.ctrl = self.kp * error + self.kd * der
-
 
         # Motor PWM
         left = self.v0 - self.ctrl
@@ -95,17 +93,14 @@ class LineFollower:
 
         # Clip just in case, use safety factor
         safe = 0.9
-        left = max(min(left, 6000* safe), -6000*safe)
-        right = max(min(right, 6000*safe), -6000*safe)
+        left = max(min(left, 6000 * safe), -6000 * safe)
+        right = max(min(right, 6000 * safe), -6000 * safe)
 
         # Send to motors
         self._motors.set_speeds(left, right)
 
         # Store previous error
         self.prev_e = error
-
-    
-
 
 ## Controller to attain a given movement of forward speed and turning rate.
 class KinematicController:
@@ -145,7 +140,6 @@ class KinematicController:
         self._motors.set_speeds(
             self.forward_speed + self.turn_speed, self.forward_speed - self.turn_speed
         )
-
 
 ## Controller to follow a polynomial path between a start and target pose.
 class PathFollower:

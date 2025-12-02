@@ -175,8 +175,8 @@ class Navigation:
         self.pose_filter.update()
         # including flag for corners 
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
+            self.uart.write("Ecke erkannt")
             self.has_flag = True
-            self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
             min_dist = float('inf')  
             self.closest_point = None
                # Iterate through the list and determine which point has the shortest distance to the current position.   
@@ -186,10 +186,10 @@ class Navigation:
                     min_dist = dist
                     self.closest_point = element
             self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
-            self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}\n")
         #   resets the has_flag variable
         if self.per.get_corner() == False and self.has_flag == True:
             self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
+            self.uart.write("Ecke weg")
             self.has_flag = False
             
         self.scan_parking_spots()

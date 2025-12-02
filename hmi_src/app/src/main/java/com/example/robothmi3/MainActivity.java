@@ -69,15 +69,27 @@ public class MainActivity extends AppCompatActivity {
         //parkSlotButton1 = findViewById(R.id.parkSlotButton1);
 
         // Aktionen für Steuerungsbuttons
-        buttonIdle.setOnClickListener(v -> sendCommand("z\n"));
-        buttonIdle.setOnClickListener(v -> textViewModus.setText("Modus: Idle"));
-        buttonScout.setOnClickListener(v -> sendCommand("y\n"));
-        buttonScout.setOnClickListener(v -> textViewModus.setText("Modus: Scout"));
-        buttonParking.setOnClickListener(v -> anfrageParkingSpots());
-        buttonParking.setOnClickListener(v -> textViewModus.setText("Modus: Parking"));
+        //buttonIdle.setOnClickListener(v -> sendCommand("z\n"));
+        buttonIdle.setOnClickListener(v -> {
+            sendCommand("z\n");
+            textViewModus.setText("Modus: Idle");
+        });
+        //buttonScout.setOnClickListener(v -> sendCommand("y\n"));
+        buttonScout.setOnClickListener(v -> {
+            sendCommand("y\n");
+            textViewModus.setText("Modus: Scout");
+        });
+        //buttonParking.setOnClickListener(v -> anfrageParkingSpots());
+        buttonParking.setOnClickListener(v -> {
+            anfrageParkingSpots();
+            textViewModus.setText("Modus: Parking");
+        });
         //parkSlotButton1.setOnClickListener(v -> sendCommand("3\n"));
-        buttonSetup.setOnClickListener(v -> sendCommand("r\n"));
-        buttonSetup.setOnClickListener(v -> textViewModus.setText("Modus: SetUp"));
+        //buttonSetup.setOnClickListener(v -> sendCommand("r\n"));
+        buttonSetup.setOnClickListener(v -> {
+            sendCommand("r\n");
+            textViewModus.setText("Modus: SetUp");
+        });
 
         // Bluetooth-Adapter holen (null, falls Gerät kein Bluetooth unterstützt)
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -359,9 +371,7 @@ public class MainActivity extends AppCompatActivity {
         String[] tokens = buffer.toString().split(";");
 
         for (int i = 0; i + 5 < tokens.length; i += 6) {
-            float scale = 1.13f;
-
-            float id = Float.parseFloat(tokens[i]) * scale;
+            float id = Float.parseFloat(tokens[i]);
             float x1 = Float.parseFloat(tokens[i + 1]);
             float y1 = Float.parseFloat(tokens[i + 2]);
             float x2 = Float.parseFloat(tokens[i + 3]);

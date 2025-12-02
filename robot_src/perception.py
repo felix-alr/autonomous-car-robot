@@ -274,6 +274,7 @@ class Perception:
 
         self.imu.gyro.read()
         gz = self.imu.gyro.last_reading_dps[2] # Z-Achse
+        #self.uart.write(f"{gz}")
 
         self._integrated_z_angle += gz * dt #°
 
@@ -283,11 +284,11 @@ class Perception:
         ROTATIONAL_THRESHOLD_LOWER = 10
         #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
 
-        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER:
+        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz) >180) :#and gz >40
             self.uart.write("Jetzt  ")
             self._corner_detected = True
             #self._integrated_z_angle =0.0
-        elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER:
+        elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER and (abs(gz) < 100):# and gz < 40
             self.uart.write("Nicht mehr\n")
             self._corner_detected = False
             #self._integrated_z_angle = 0.0

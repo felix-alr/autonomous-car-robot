@@ -9,17 +9,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Check if current directory name is "robot-src"
+REM Check if current directory name is "robot_src"
 for %%d in ("%cd%") do set "CURDIR=%%~nxd"
 
-if /I "%CURDIR%"=="robot-src" (
-    echo Already in robot-src directory.
+if /I "%CURDIR%"=="robot_src" (
+    echo Already in robot_src directory.
 ) else (
-    if exist "robot-src" (
-        echo Moving into robot-src directory...
-        cd robot-src
+    if exist "robot_src" (
+        echo Moving into robot_src directory...
+        cd robot_src
     ) else (
-        echo Error: No "robot-src" directory found in %cd%.
+        echo Error: No "robot_src" directory found in %cd%.
         exit /b 1
     )
 )

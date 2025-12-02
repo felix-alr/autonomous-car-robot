@@ -76,6 +76,7 @@ try:
         "y": lambda: gui.request_state(guidance.GuidanceState.SCOUT),
         "z": lambda: gui.request_state(guidance.GuidanceState.IDLE),
         "q": lambda: gui.request_state(guidance.GuidanceState.EXTERNAL),
+        "r": lambda: gui.request_state(guidance.GuidanceState.SETUP),
         "w": lambda: com.println(f"inc v to {con.kinematic_controller.increase_v()}"),
         "s": lambda: com.println(f"dec v to {con.kinematic_controller.decrease_v()}"),
         "d": lambda: com.println(f"inc w to {con.kinematic_controller.increase_w()}"),

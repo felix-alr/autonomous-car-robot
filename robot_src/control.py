@@ -11,8 +11,8 @@ from navigation import Navigation
 import parameters
 import math
 
-
 from machine import Pin, UART
+
 
 ## Enum for modes of the ModeController, that is the different specific control algorithms.
 class ControlMode:
@@ -24,6 +24,7 @@ class ControlMode:
 
 
 uart_int = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
+
 
 ## Main Controller to wrap all control tasks.
 #
@@ -40,8 +41,6 @@ class ModeController:
         self.kinematic_controller = KinematicController(self._motors, self._perception)
         self.path_follower = PathFollower()
         self.position_controller = PositionController()
-
-
 
     ## Select a specific control algorithm.
     #
@@ -76,14 +75,15 @@ class LineFollower:
 
         # PD gains (tune as needed)
         # Actual 'functional' values
-        self.kp = 0.006
-        self.kd = 0.0000002
+
+        self.kp = 0.005
+        self.kd = 0.00025
 
         self.dt = 0.05
         self.prev_e = 0
 
         # Base forward PWM
-        self.duty_cycle = 0.12
+        self.duty_cycle = 0.13
         self.v0 = 6000 * self.duty_cycle  # PWM
         self.ctrl = 0
 
@@ -112,6 +112,7 @@ class LineFollower:
         # Store previous error
         self.prev_e = error
 
+
 ## Controller to attain a given movement of forward speed and turning rate.
 class KinematicController:
     def __init__(self, motors: Motors, perception: Perception):
@@ -124,19 +125,10 @@ class KinematicController:
         self.manual_sensitivity_rot = -5
 
         self.prevT = 0
-        self.initialT = 0
-
-        self.prevELeft = 0
-        self.prevERight = 0
 
         # PID parameters
-        self.KpR = 0.5
-        self.KiR = 10
-        self.KdR = 0.5
-
-        self.KpL = 0.5
-        self.KiL = 10
-        self.KdL = 0.5
+        self.Kp = 0.5
+        self.Ki = 10
 
         self.iLeft = 0
         self.iRight = 0
@@ -179,54 +171,51 @@ class KinematicController:
 
         # PID control loop
         if (self.prevT == 0):
-            self.initialT = time.time_ns()
-            self.prevT = self.initialT
+            self.prevT = time.ticks_us()
             return
 
         # Reference speeds
-        refLeft = self.forward_speed - (self.turn_speed*parameters.ROBOT_WHEEL_DISTANCE/2)
-        refRight = self.forward_speed + (self.turn_speed*parameters.ROBOT_WHEEL_DISTANCE/2)
+        refLeft = self.forward_speed - (self.turn_speed * parameters.ROBOT_WHEEL_DISTANCE / 2)
+        refRight = self.forward_speed + (self.turn_speed * parameters.ROBOT_WHEEL_DISTANCE / 2)
 
         eLeft = refLeft - self.yMLeft(self._perception.get_wheel_speed_left())
         eRight = refRight - self.yMRight(self._perception.get_wheel_speed_right())
 
-        #uart_int.write(f"Right: (ref: {refRight}, actual: {self._perception.get_wheel_speed_right()}, actual(calc): {self.yMRight(self._perception.get_wheel_speed_right())}, err: {eRight})\nLeft: (ref: {refLeft}, actual: {self._perception.get_wheel_speed_left()}, actual(calc): {self.yMLeft(self._perception.get_wheel_speed_left())}, err: {eLeft})\n\n")
+        # uart_int.write(f"Right: (ref: {refRight}, actual: {self._perception.get_wheel_speed_right()}, actual(calc): {self.yMRight(self._perception.get_wheel_speed_right())}, err: {eRight})\nLeft: (ref: {refLeft}, actual: {self._perception.get_wheel_speed_left()}, actual(calc): {self.yMLeft(self._perception.get_wheel_speed_left())}, err: {eLeft})\n\n")
 
         # Calculation of integral part
-        dT = time.time_ns() - self.prevT
-        T = time.time_ns() - self.initialT
+        dT = time.ticks_diff(time.ticks_us(), self.prevT) / 1e6
 
-        self.iLeft += eLeft*dT
-        self.iRight += eRight*dT
+        self.iLeft += eLeft * dT
+        self.iRight += eRight * dT
 
-        self.prevT = time.time_ns()
+        self.prevT = time.ticks_us()
 
         # Manipulated variables
-        mLeft = refLeft + self.KpL * eLeft + self.KiL * (self.iLeft/T) - self.KdL*(eLeft-self.prevELeft)
-        mRight = refRight + self.KpR * eRight + self.KiR * (self.iRight/T) - self.KdR*(eRight-self.prevERight)
-
-        self.prevELeft = eLeft
-        self.prevERight = eRight
+        mLeft = refLeft + self.Kp * eLeft + self.Ki * (self.iLeft)
+        mRight = refRight + self.Kp * eRight + self.Ki * (self.iRight)
 
         # Set motor speeds
-        self._motors.set_speeds(max(min(mLeft, self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed),
-                                max(min(mRight, self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed))
+        self._motors.set_speeds(
+            max(min(mLeft, self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed),
+            max(min(mRight, self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed))
 
     # yM (for the right motor) as a function of right wheel speed
     def yMRight(self, wheel_speed_right):
         if wheel_speed_right < 0:
-            return -0.004496663911564471*wheel_speed_right*wheel_speed_right*wheel_speed_right -0.3495643763999523*wheel_speed_right*wheel_speed_right + 53.6919009995278*wheel_speed_right -165.18648593231
+            return -0.004496663911564471 * wheel_speed_right * wheel_speed_right * wheel_speed_right - 0.3495643763999523 * wheel_speed_right * wheel_speed_right + 53.6919009995278 * wheel_speed_right - 165.18648593231
         elif wheel_speed_right > 0:
-            return wheel_speed_right * 1700/(29.38887) - 300*(29.59929)/1700
+            return wheel_speed_right * 1700 / (29.38887) - 300 * (29.59929) / 1700
         return 0
 
     # yM (for the left motor) as a function of left wheel speed
     def yMLeft(self, wheel_speed_left):
         if wheel_speed_left < -0:
-            return -0.00199006068026202*wheel_speed_left*wheel_speed_left*wheel_speed_left -0.135572309354336*wheel_speed_left*wheel_speed_left + 56.2486786207565*wheel_speed_left -188.22243084817
+            return -0.00199006068026202 * wheel_speed_left * wheel_speed_left * wheel_speed_left - 0.135572309354336 * wheel_speed_left * wheel_speed_left + 56.2486786207565 * wheel_speed_left - 188.22243084817
         elif wheel_speed_left > 0:
-            return wheel_speed_left * 1700/(29.59929-1.052107) - 300*(29.59929-1.052107)/1700
+            return wheel_speed_left * 1700 / (29.59929 - 1.052107) - 300 * (29.59929 - 1.052107) / 1700
         return 0
+
 
 ## Controller to follow a polynomial path between a start and target pose.
 class PathFollower:
@@ -236,6 +225,7 @@ class PathFollower:
     def run(self):
         pass
 
+
 ## Controller implementing a position control algorithm.
 class PositionController:
     def __init__(self):
@@ -244,6 +234,6 @@ class PositionController:
     ## Set target position with x and y coordinate.
     def set_position(self, x, y):
         self.target = (x, y)
-        
+
     def run(self):
         pass

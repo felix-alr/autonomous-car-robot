@@ -6,6 +6,6 @@ def alter_parameters(uart, con, parameter):
     val = float(buf.strip())
     try:
         uart.write(f"Value: '{val}'\n")
-        setattr(con.line_follower, parameter, val)
+        setattr(con.kinematic_controller, parameter, val)
     except AttributeError:
         uart.write(f"Unknown attribute '{parameter}'. Could not assign value '{val}'.")

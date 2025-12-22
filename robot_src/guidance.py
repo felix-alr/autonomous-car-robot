@@ -28,8 +28,12 @@ class GuidanceSetupState:
     RIGHT2 = 3
     DONE = 4
 
-
-# define more state enums here
+class GuidanceParkingState:
+    APPROACH = "approach"
+    ALIGN = "align"
+    PARK = "park"
+    HOLD = "hold"
+    LEAVE = "leave"
 
 ## Main state machine for operating the robot.
 class GuidanceStateMachine:
@@ -39,6 +43,12 @@ class GuidanceStateMachine:
         self.requested_state = None
         self.current_setup_state = None
         self.last_setup_state = None
+        self.current_parking_state = None
+        self.last_parking_state = None
+        
+        self.current_parking_spot = None
+        self.start_pose = None
+        self.end_pose = None
 
         self.display = Display()
 
@@ -58,6 +68,27 @@ class GuidanceStateMachine:
         """start the parking maneuver by receiving the user-selected spot and enabling the respective Guidance state"""
         id = self.com.receive_target_spot()
         # todo students: request suitable GuidanceState here, process the id ...
+        self.request_state(GuidanceState.PARKING)
+        self.current_parking_spot = self.navigation.parking_spots[id]
+
+    ## Generate start and end poses for the parking maneuver.
+    def generate_parking_path(self):
+        x1 = self.navigation.parking_spots[self.current_parking_spot].x1
+        y1 = self.navigation.parking_spots[self.current_parking_spot].y1
+        x2 = self.navigation.parking_spots[self.current_parking_spot].x2
+        y2 = self.navigation.parking_spots[self.current_parking_spot].y2
+
+        if x1 == x2:
+            if y1 > y2:
+                self.start_pose = self.navigation.pose(x1+ 100, y1, 270)
+                self.end_pose = self.navigation.pose(x1 - 75, (y1 + y2)/2, 270)
+            else:
+                self.start_pose = self.navigation.pose(x1 - 100, y1, 90)
+                self.end_pose = self.navigation.pose(x1 + 75, (y1 + y2) / 2, 90)
+        else:
+            self.start_pose = self.navigation.pose(x1, y1 + 100, 0)
+            self.end_pose = self.navigation.pose((x1 + x2) / 2, y1 - 75, 0)
+
 
 
     ## Request the state of next execution.
@@ -156,17 +187,20 @@ class GuidanceStateMachine:
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
 
-        elif self.current_state == GuidanceState.EXTERNAL:
+        elif self.current_state == GuidanceState.PARKING:
             if self.current_state != self.last_state:
                 # entry action
-                self.control.set_mode(ControlMode.Kinematic)
-            # nominal action
-            self.control.run()
+                self.generate_parking_path() #Pfadrandposen berechnen
+                self.current_parking_state = GuidanceParkingState.APPROACH
+                self.last_parking_state = None
+            # nominal action: run submachine
+            #if self.current_parking_state == GuidanceParkingState.APPROACH:
 
-            if self.requested_state and self.requested_state != GuidanceState.EXTERNAL:
+                
+            #if self.requested_state and self.requested_state != GuidanceState.PARKING:
                 # exit action
-                self.control.set_mode(ControlMode.Inactive)
-                self.control.run()
+             #   self.control.set_mode(ControlMode.Inactive)
+              #  self.control.run()
 
         # todo students: implement more states here
 

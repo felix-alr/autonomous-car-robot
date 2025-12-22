@@ -194,8 +194,33 @@ class GuidanceStateMachine:
                 self.current_parking_state = GuidanceParkingState.APPROACH
                 self.last_parking_state = None
             # nominal action: run submachine
-            #if self.current_parking_state == GuidanceParkingState.APPROACH:
+            if self.current_parking_state == GuidanceParkingState.APPROACH:
+                if self.current_parking_state != self.last_parking_state:
+                    # entry action
+                    self.control.set_mode(ControlMode.Line)
+                    self.last_setup_state = self.current_setup_state
+                # nominal action
+                self.control.run()
 
+                #exit action
+                if self.requested_state and self.requested_state != GuidanceState.SCOUT:
+                    self.control.set_mode(ControlMode.Inactive)
+                    self.control.run()
+                    self.last_parking_state = GuidanceParkingState.APPROACH
+            
+            if self.current_parking_state == GuidanceParkingState.ALIGN:
+                if self.current_parking_state != self.last_parking_state:
+                    # entry action
+                    self.control.set_mode(ControlMode.Kinematic)
+                    self.last_setup_state = self.current_setup_state
+                # nominal action
+                self.control.run()
+
+                #exit action
+                if self.requested_state and self.requested_state != GuidanceState.SCOUT:
+                    self.control.set_mode(ControlMode.Inactive)
+                    self.control.run()
+                    self.last_parking_state = GuidanceParkingState.APPROACH
                 
             #if self.requested_state and self.requested_state != GuidanceState.PARKING:
                 # exit action

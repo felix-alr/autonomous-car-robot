@@ -198,30 +198,66 @@ class GuidanceStateMachine:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     self.control.set_mode(ControlMode.Line)
-                    self.last_setup_state = self.current_setup_state
                 # nominal action
                 self.control.run()
 
                 #exit action
-                if self.requested_state and self.requested_state != GuidanceState.SCOUT:
-                    self.control.set_mode(ControlMode.Inactive)
-                    self.control.run()
-                    self.last_parking_state = GuidanceParkingState.APPROACH
+                self.control.set_mode(ControlMode.Inactive)
+                self.control.run()
+                self.last_parking_state = GuidanceParkingState.APPROACH
+                if self.navigation.pose.x == self.start_pose.x and self.navigation.pose.y == self.start_pose.y:   #Prüfen, ob sich Roboter auf Startposition befindet (evtl. muss Toleranz eingebaut werden) 
+                    self.current_parking_state = GuidanceParkingState.ALIGN
             
             if self.current_parking_state == GuidanceParkingState.ALIGN:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     self.control.set_mode(ControlMode.Kinematic)
-                    self.last_setup_state = self.current_setup_state
                 # nominal action
                 self.control.run()
 
                 #exit action
-                if self.requested_state and self.requested_state != GuidanceState.SCOUT:
+                self.control.set_mode(ControlMode.Inactive)
+                self.control.run()
+                self.last_parking_state = GuidanceParkingState.APPROACH
+                if self.navigation.pose.phi == self.start_pose.phi:
+                    self.current_parking_state = GuidanceParkingState.PARK
+
+            if self.current_parking_state == GuidanceParkingState.PARK:
+                if self.current_parking_state != self.last_parking_state:
+                    # entry action
+                    #Übergabe der Start- und Endpose an den PathFollower fehlt
+                    self.control.set_mode(ControlMode.Path)
+                # nominal action
+                self.control.run()
+
+                #exit action
+                self.control.set_mode(ControlMode.Inactive)
+                self.control.run()
+                self.last_parking_state = GuidanceParkingState.PARK
+                if self.navigation.pose.x == self.end_pose.x and self.navigation.pose.y == self.end_pose.y: # evtl. fehlen
+                    self.current_parking_state = GuidanceParkingState.HOLD
+
+            if self.current_parking_state == GuidanceParkingState.HOLD:
+                if self.current_parking_state != self.last_parking_state:
+                    #entry action
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
-                    self.last_parking_state = GuidanceParkingState.APPROACH
-                
+                # exit action
+                self.last_parking_state = GuidanceParkingState.HOLD
+
+            if self.current_parking_state == GuidanceParkingState.LEAVE:
+                if self.current_parking_state != self.last_parking_state:
+                    # entry action
+                    #Übergabe der Start- und Endpose an den PathFollower fehlt
+                    self.control.set_mode(ControlMode.Path)
+                # nominal action
+                self.control.run()
+
+                #exit action
+                self.control.set_mode(ControlMode.Inactive)
+                self.control.run()
+                self.last_parking_state = GuidanceParkingState.LEAVE
+
             #if self.requested_state and self.requested_state != GuidanceState.PARKING:
                 # exit action
              #   self.control.set_mode(ControlMode.Inactive)

@@ -113,6 +113,7 @@ class GuidanceStateMachine:
         if self.current_state == GuidanceState.IDLE:
             if self.current_state != self.last_state:
                 # entry action
+                self.last_parking_state = None # Damit die Eingangsaktion nach Stoppen und Rückkehr in den Parkmodus erneut ausgeführt wird
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
 
@@ -178,7 +179,7 @@ class GuidanceStateMachine:
             if self.current_state != self.last_state:
                 # entry action
                 self.control.set_mode(ControlMode.Line)
-
+                self.current_parking_state = GuidanceParkingState.APPROACH #Damit der Roboter nach der Parklückensuche beim Übergang in den Zustand parking immer erstmal die Parklücke anfährt
             # nominal action
             self.control.run()
 
@@ -191,9 +192,8 @@ class GuidanceStateMachine:
             if self.current_state != self.last_state:
                 # entry action
                 self.generate_parking_path() #Pfadrandposen berechnen
-                self.current_parking_state = GuidanceParkingState.APPROACH
-                self.last_parking_state = None
             # nominal action: run submachine
+            # anfahren
             if self.current_parking_state == GuidanceParkingState.APPROACH:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
@@ -201,13 +201,13 @@ class GuidanceStateMachine:
                 # nominal action
                 self.control.run()
 
-                #exit action
-                self.control.set_mode(ControlMode.Inactive)
-                self.control.run()
-                self.last_parking_state = GuidanceParkingState.APPROACH
+                #exit action (nur beim Übergang in anderen Unterzustand)
                 if self.navigation.pose.x == self.start_pose.x and self.navigation.pose.y == self.start_pose.y:   #Prüfen, ob sich Roboter auf Startposition befindet (evtl. muss Toleranz eingebaut werden) 
+                    self.control.set_mode(ControlMode.Inactive)
+                    self.control.run()
+                    self.last_parking_state = GuidanceParkingState.APPROACH
                     self.current_parking_state = GuidanceParkingState.ALIGN
-            
+            # ausrichten
             if self.current_parking_state == GuidanceParkingState.ALIGN:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
@@ -216,12 +216,12 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action
-                self.control.set_mode(ControlMode.Inactive)
-                self.control.run()
-                self.last_parking_state = GuidanceParkingState.APPROACH
                 if self.navigation.pose.phi == self.start_pose.phi:
+                    self.control.set_mode(ControlMode.Inactive)
+                    self.control.run()
+                    self.last_parking_state = GuidanceParkingState.APPROACH
                     self.current_parking_state = GuidanceParkingState.PARK
-
+            # einparken
             if self.current_parking_state == GuidanceParkingState.PARK:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
@@ -231,20 +231,20 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action
-                self.control.set_mode(ControlMode.Inactive)
-                self.control.run()
-                self.last_parking_state = GuidanceParkingState.PARK
                 if self.navigation.pose.x == self.end_pose.x and self.navigation.pose.y == self.end_pose.y: # evtl. fehlen
+                    self.control.set_mode(ControlMode.Inactive)
+                    self.control.run()
+                    self.last_parking_state = GuidanceParkingState.PARK
                     self.current_parking_state = GuidanceParkingState.HOLD
-
+            # halten
             if self.current_parking_state == GuidanceParkingState.HOLD:
                 if self.current_parking_state != self.last_parking_state:
                     #entry action
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
-                # exit action
-                self.last_parking_state = GuidanceParkingState.HOLD
-
+                    self.last_parking_state = GuidanceParkingState.HOLD
+                # auf HMI-Befehl  warten zum Verlassen der Parklücke (dabei current_parking_state auf LEAVE setzen)
+            # verlassen
             if self.current_parking_state == GuidanceParkingState.LEAVE:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
@@ -254,18 +254,16 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action
+                if self.navigation.pose.x == self.start_pose.x and self.navigation.pose.y == self.start_pose.y:   #Prüfen, ob sich Roboter auf Startposition befindet (evtl. muss Toleranz eingebaut werden) 
+                    self.request_state(GuidanceState.SCOUT)
+                    self.control.set_mode(ControlMode.Inactive)
+                    self.control.run()
+                    self.last_parking_state = GuidanceParkingState.LEAVE
+
+            if self.requested_state and self.requested_state != GuidanceState.PARKING:
+                # exit action
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
-                self.last_parking_state = GuidanceParkingState.LEAVE
-
-            #if self.requested_state and self.requested_state != GuidanceState.PARKING:
-                # exit action
-             #   self.control.set_mode(ControlMode.Inactive)
-              #  self.control.run()
-
-        # todo students: implement more states here
-
-
 
         # finally save state of current execution and apply possible state of next execution
         self.last_state = self.current_state

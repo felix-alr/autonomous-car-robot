@@ -94,6 +94,10 @@ class GuidanceStateMachine:
     ## Request the state of next execution.
     def request_state(self, state: GuidanceState):
         self.requested_state = state
+        if self.current_state == GuidanceState.PARKING and self.requested_state == GuidanceState.SCOUT: # Um Ausparken über Scout Befehl zu realisieren
+            self.requested_state = GuidanceState.PARKING
+            self.current_parking_state = GuidanceParkingState.LEAVE
+            
 
     ## Helper to print the state of current execution on the display.
     def show_current_state(self):
@@ -243,7 +247,6 @@ class GuidanceStateMachine:
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.HOLD
-                # auf HMI-Befehl  warten zum Verlassen der Parklücke (dabei current_parking_state auf LEAVE setzen)
             # verlassen
             if self.current_parking_state == GuidanceParkingState.LEAVE:
                 if self.current_parking_state != self.last_parking_state:

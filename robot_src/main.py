@@ -18,6 +18,9 @@ try:
     import control
     import communication
 
+    # DEBUG
+    import control_test
+
     ## time for one execution cycle
     SAMPLETIME = 50000  # in microseconds (us)
 
@@ -76,10 +79,15 @@ try:
         "y": lambda: gui.request_state(guidance.GuidanceState.SCOUT),
         "z": lambda: gui.request_state(guidance.GuidanceState.IDLE),
         "q": lambda: gui.request_state(guidance.GuidanceState.EXTERNAL),
+        "r": lambda: gui.request_state(guidance.GuidanceState.SETUP),
         "w": lambda: com.println(f"inc v to {con.kinematic_controller.increase_v()}"),
         "s": lambda: com.println(f"dec v to {con.kinematic_controller.decrease_v()}"),
         "d": lambda: com.println(f"inc w to {con.kinematic_controller.increase_w()}"),
         "a": lambda: com.println(f"dec w to {con.kinematic_controller.decrease_w()}"),
+
+        # DEBUG
+        "p": lambda: control_test.alter_parameters(com.uart, con, "kp"),
+        "k": lambda: control_test.alter_parameters(com.uart, con, "kd"),
     }
     com.bind_map(keymap)
 

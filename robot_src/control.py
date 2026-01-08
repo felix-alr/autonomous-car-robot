@@ -121,14 +121,14 @@ class KinematicController:
 
         self.forward_speed = 0
         self.turn_speed = 0
-        self.manual_sensitivity_fwd = 100
-        self.manual_sensitivity_rot = -5
+        self.manual_sensitivity_fwd = 0.5
+        self.manual_sensitivity_rot = -0.1
 
         self.prevT = 0
 
-        # PID parameters
+        # PI parameters
         self.Kp = 0.5
-        self.Ki = 10
+        self.Ki = 2
 
         self.iLeft = 0
         self.iRight = 0
@@ -178,8 +178,8 @@ class KinematicController:
         refLeft = self.forward_speed - (self.turn_speed * parameters.ROBOT_WHEEL_DISTANCE / 2)
         refRight = self.forward_speed + (self.turn_speed * parameters.ROBOT_WHEEL_DISTANCE / 2)
 
-        eLeft = refLeft - self.yMLeft(self._perception.get_wheel_speed_left())
-        eRight = refRight - self.yMRight(self._perception.get_wheel_speed_right())
+        eLeft = refLeft - self._perception.get_wheel_speed_left()
+        eRight = refRight - self._perception.get_wheel_speed_right()
 
         # uart_int.write(f"Right: (ref: {refRight}, actual: {self._perception.get_wheel_speed_right()}, actual(calc): {self.yMRight(self._perception.get_wheel_speed_right())}, err: {eRight})\nLeft: (ref: {refLeft}, actual: {self._perception.get_wheel_speed_left()}, actual(calc): {self.yMLeft(self._perception.get_wheel_speed_left())}, err: {eLeft})\n\n")
 
@@ -197,8 +197,8 @@ class KinematicController:
 
         # Set motor speeds
         self._motors.set_speeds(
-            max(min(mLeft, self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed),
-            max(min(mRight, self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed))
+            max(min(self.yMLeft(mLeft), self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed),
+            max(min(self.yMLeft(mRight), self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed))
 
     # yM (for the right motor) as a function of right wheel speed
     def yMRight(self, wheel_speed_right):

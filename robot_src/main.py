@@ -86,8 +86,8 @@ try:
         "a": lambda: com.println(f"dec w to {con.kinematic_controller.decrease_w()}"),
 
         # DEBUG
-        "p": lambda: control_test.alter_parameters(com.uart, con, "kp"),
-        "k": lambda: control_test.alter_parameters(com.uart, con, "kd"),
+        "k": lambda: control_test.alter_parameters(com.uart, con, "Kp"),
+        "l": lambda: control_test.alter_parameters(com.uart, con, "Ki"),
     }
     com.bind_map(keymap)
 

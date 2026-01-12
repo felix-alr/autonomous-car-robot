@@ -216,6 +216,7 @@ class GuidanceStateMachine:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     self.control.set_mode(ControlMode.Kinematic)
+                    self.control.kinematic_controller.set_vw(0, 1) # Wert verändern?
                 # nominal action
                 self.control.run()
 

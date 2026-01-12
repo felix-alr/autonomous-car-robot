@@ -38,7 +38,7 @@ class ModeController:
         self._motors = Motors()
 
         self.line_follower = LineFollower(self._motors, perception)
-        self.kinematic_controller = KinematicController(self._motors, self._perception)
+        self.kinematic_controller = (self._motors, self._perception)
         self.path_follower = PathFollower()
         self.position_controller = PositionController()
 
@@ -220,12 +220,55 @@ class KinematicController:
 
 ## Controller to follow a polynomial path between a start and target pose.
 class PathFollower:
-    def __init__(self):
-        pass
+    def __init__(self, kinematic_controller: KinematicController):
+        self.s = 0
+        self.ps = [200, 200, 0]
+        self.pz = [0,0,0]
+        self.kin_ctr = kinematic_controller
 
     def run(self):
-        pass
+        if self.s < 1:
+            self.kin_ctr.set_vw(self.v(self.s, self.ps, self.pz), self.w(self.s, self.ps, self.pz))
+            self.s += 0.01
+        else:
+            self.kin_ctr.set_vw(0,0)
 
+
+    def x1(self, s, ps, pz):
+        return s*(pz[0] - ps[0]) + ps[0]
+
+    def dds_x1(self, s, ps, pz):
+        return pz[0] - ps[0]
+
+    def dds2_x1(self, s, ps, pz):
+        return 0
+
+    def x2(self, s, ps, pz):
+        a = pz[2] + ps[2] + 2*ps[1] - 2* pz[1]
+        b = 3*pz[1] - 3*ps[1] -2*ps[2] - pz[2]
+        c = ps[2]
+        d = ps[1]
+        return a*s**3 + b*s**2 + c*s + d
+
+    def dds_x2(self, s, ps, pz):
+        a = pz[2] + ps[2] + 2*ps[1] - 2* pz[1]
+        b = 3*pz[1] - 3*ps[1] -2*ps[2] - pz[2]
+        c = ps[2]
+
+        return 3*a*s**2 + 2*b*s + c
+
+    def dds2_x2(self, s, ps, pz):
+        a = pz[2] + ps[2] + 2*ps[1] - 2* pz[1]
+        b = 3*pz[1] - 3*ps[1] -2*ps[2] - pz[2]
+        c = ps[2]
+
+        return 3*a*s + 2*b
+
+    def v(self, s, ps, pz, cv):
+        return math.sqrt(self.dds_x1(s, ps, pz)**2 + self.dds_x2(s, ps, pz)**2) * cv
+
+    def w(self, s, ps, pz, cw):
+        return math.sqrt(self.dds2_x1(s, ps, pz)**2 + self.dds2_x2(s, ps, pz)**2) * cw
 
 ## Controller implementing a position control algorithm.
 class PositionController:

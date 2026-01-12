@@ -2,6 +2,11 @@
 #
 # REMOVED ist hier der Chef
 # Module to implement localization of the robot and parking spot detection.
+
+# for communication
+from machine import Pin, UART
+
+
 from math import sin, cos, atan2, sqrt, pi
 import time
 import math
@@ -124,7 +129,11 @@ class Navigation:
         self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
         self.parking_spot_size = 180
         self.per = per
+        self.has_flag = False
         self.pose = Pose()
+        #Kommunikation (Test)
+        self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
+
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key
         self.parking_spots: dict[int, ParkingSpot] = {}
@@ -136,6 +145,17 @@ class Navigation:
         #     ...
         # ]
         self.parcours: list[Line] = []
+
+        self.corners = [
+            Pose(0,0,0), 
+            Pose(300,0,90), 
+            Pose(300,300,0),
+            Pose(800,300,90),
+            Pose(800,600,180),
+            Pose(0,600,270),
+            ]
+         
+        
 
     ## Return a map of the parcours.
     #
@@ -153,13 +173,44 @@ class Navigation:
     # Should be periodically called in the main state machine.
     def update(self):
         self.pose_filter.update()
+        # including flag for corners 
+        if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
+            self.has_flag = True
+            self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
+            min_dist = float('inf')  
+            self.closest_point = None
+               # Iterate through the list and determine which point has the shortest distance to the current position.   
+            for element in self.corners:
+                dist = sqrt((element.x - self.pose.x)**2 + (element.y - self.pose.y)**2)
+                if dist < min_dist:
+                    min_dist = dist
+                    self.closest_point = element
+            self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
+            self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}\n")
+        #   resets the has_flag variable
+        if self.per.get_corner() == False and self.has_flag == True:
+            self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
+            self.has_flag = False
+            
         self.scan_parking_spots()
 
         # Add further function calls to be executed here.
 
+    # set_pose to a fixed vatue (Eckenflag)
+    def set_pose(self, x:float, y:float, phi:float):
+        self.pose.x = x
+        self.pose.y = y
+        self.pose.phi = phi
+        # Synchronize the stored encoder counts with the current hardware values 
+        # to prevent a false position jump after manually setting the robot pose
+        self.pose_filter.last_counts_left, self.pose_filter.last_counts_right = self.per.encoders.get_counts() 
+
     ## Return the current Pose.
     def get_pose(self) -> Pose:
         return self.pose
+    
+    def print_pose(self):
+        return self.pose.x , self.pose.y , self.pose.phi
 
     ## Return the current position.
     #
@@ -194,17 +245,17 @@ class Navigation:
 
     ## Scan for available parking spots on the side.
     def scan_parking_spots(self):
-        if self.per.get_distance() > 150 and self.has_parkingspot == False: #Trigger for start_pose  
+        if self.per.get_distance() > 100 and self.has_parkingspot == False: #Trigger for start_pose  
             self.has_parkingspot = True
             self.pose_start = Pose(self.pose.x, self.pose.y, self.pose.phi) # safe start pose 
         
-        if self.per.get_distance() <= 150 and self.has_parkingspot == True: # Trigger for end_pose 
+        if self.per.get_distance() <= 100 and self.has_parkingspot == True: # Trigger for end_pose 
             self.has_parkingspot = False 
             self.pose_end = Pose(self.pose.x, self.pose.y, self.pose.phi)   # safe end pose 
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
             phi = abs(self.pose_start.phi - self.pose_end.phi)  # calculating angle between two points to filter out the corners
 
-            if a > 50 and phi < 30: # checking if it is real parkingspot
+            if a > 50 and phi < 25: # checking if it is real parkingspot
                 new_id = len(self.parking_spots)+1  # new id for new parkingslot
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 

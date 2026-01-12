@@ -6,12 +6,15 @@
     sodass es im Java-Code referenziert und angesteuert werden kann.
 -->
 
+
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
     android:orientation="vertical">
+
     <!-- Layout nimmt die gesamte Bildschirmbreite
          Layout nimmt die gesamte Bildschirmhöhe
          Innenabstand zum Bildschirmrand
@@ -22,94 +25,140 @@
         android:id="@+id/buttonConnect"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Connect"/>
+        android:text="Connect"
+        android:backgroundTint="@color/blue"/>
 
-
-    <!-- Anzeige des aktuellen Verbindungsstatus -->
-    <TextView
-        android:id="@+id/textViewStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Status: Nicht verbunden"
-        android:paddingTop="16dp"/>
-
-    <!-- Anzeige der X-Position des Roboters -->
-    <TextView
-        android:id="@+id/textViewPosX"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="X: -" />
-
-    <!-- Anzeige der Y-Position des Roboters -->
-    <TextView
-        android:id="@+id/textViewPosY"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Y: -" />
-
-    <!-- Anzeige des Phi-Winkels des Roboters -->
-    <TextView
-        android:id="@+id/textViewPhi"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Phi: -" />
-
-    <!-- Bereich für die Steuerungsbuttons (Steuerkreuz + Start) -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="249dp"
-        android:layout_marginTop="24dp"
-        android:gravity="center"
-        android:orientation="vertical">
-        <!-- Buttons werden zentriert ausgerichtet
-             Buttons übereinander anordnen -->
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp">
 
-        <!-- Vorwärts-Button -->
-        <Button
-            android:id="@+id/buttonForward"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:text="↑" />
-
-        <!-- Horizontale Anordnung für Links, Rückwärts, Rechts -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <!-- Anzeige des aktuellen Verbindungsstatus -->
+        <TextView
+            android:id="@+id/textViewStatus"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_weight="1"
+            android:text="Status: Nicht verbunden" />
 
-            <!-- Links-Button -->
-
-            <!-- Rückwärts-Button -->
-            <Button
-                android:id="@+id/buttonLeft"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:text="←" />
-
-            <Button
-                android:id="@+id/buttonBackward"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:text="↓" />
-
-            <!-- Rechts-Button -->
-            <Button
-                android:id="@+id/buttonRight"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:text="→" />
-        </LinearLayout>
-
-
-        <!-- Start-Button (kann z. B. zum Aktivieren einer Automatik genutzt werden) -->
-        <Button
-            android:id="@+id/buttonStart"
-            android:layout_width="wrap_content"
+        <!-- Modus Anzeigen -->
+        <TextView
+            android:id="@+id/textViewModus"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Start" />
+            android:layout_weight="1"
+            android:text="Modus: Idle" />
+
+        <!-- Anzeige der X-Position des Roboters -->
+        <TextView
+            android:id="@+id/textViewPosX"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="X: -" />
+
+        <!-- Anzeige der Y-Position des Roboters -->
+        <TextView
+            android:id="@+id/textViewPosY"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Y: -" />
+
+        <!-- Anzeige des Phi-Winkels des Roboters -->
+        <TextView
+            android:id="@+id/textViewPhi"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Phi: -" />
 
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_gravity="center">
 
+
+        <!-- Bereich für die Steuerungsbuttons -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Buttons werden zentriert ausgerichtet
+             Buttons übereinander anordnen -->
+
+            <!-- Idle-Button -->
+            <Button
+                android:id="@+id/buttonIdle"
+                android:layout_width="128dp"
+                android:layout_height="64dp"
+                android:backgroundTint="@color/blue"
+                android:text="IDLE" />
+
+            <!-- SCOUT-Button -->
+            <Button
+                android:id="@+id/buttonScout"
+                android:layout_width="128dp"
+                android:layout_height="64dp"
+                android:backgroundTint="@color/blue"
+                android:text="SCOUT" />
+
+            <!-- PARKING-Button -->
+            <Button
+                android:id="@+id/buttonParking"
+                android:layout_width="128dp"
+                android:layout_height="64dp"
+                android:backgroundTint="@color/blue"
+                android:text="PARKING" />
+
+            <!-- SETUP-Button -->
+            <Button
+                android:id="@+id/buttonSetup"
+                android:layout_width="128dp"
+                android:layout_height="64dp"
+                android:backgroundTint="@color/blue"
+                android:radius="1dp"
+                android:text="SETUP" />
+
+            <TextView
+                android:id="@+id/textViewText"
+                android:layout_width="128dp"
+                android:layout_height="320dp"
+                android:text="Text:" >
+
+            </TextView>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="60dp"
+            android:layout_height="match_parent">
+        </LinearLayout>
+        <!-- Möglichkeit FrameLayout (android:id="@+id/mapContainer") -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center">
+
+            <!-- Bild Karte Roboter -->
+            <com.example.robothmi3.MapView
+                android:id="@+id/mapView"
+                android:layout_width="930dp"
+                android:layout_height="620dp"/>
+            <!--
+            <Button
+                android:id="@+id/parkSlotButton1"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:text="P" /> -->
+
+        </RelativeLayout>
+    </LinearLayout>
 </LinearLayout>

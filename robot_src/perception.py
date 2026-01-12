@@ -4,6 +4,7 @@
 import time
 import machine
 
+from machine import Pin,UART
 from pololu_3pi_2040_robot import robot
 from pololu_3pi_2040_robot import imu
 from parameters import COUNTS_PER_REV, ROBOT_WHEEL_RADIUS
@@ -226,6 +227,10 @@ class Perception:
         self.led_corner = yellow_led.YellowLED()
         self._last_time_gyro = time.ticks_ms()
         self._integrated_z_angle = 0.0 #°
+        self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
+        self._last_corner_time = 0      # Zeitmarke für den Cooldown
+        self._corner_cooldown = 1000   # Cooldown in ms
+        self._corner_detected = False  
 
     ## Run all update routines of the perception module.
     def update(self):
@@ -258,7 +263,7 @@ class Perception:
         right_speed= self.wheel_speed_filter.get_wheel_speed_right()
         self.imu.read()
 
-        SPEED_DIFF_THRESHOLD = 2.0
+        SPEED_DIFF_THRESHOLD = 1.0 # eigentlich 2
 
         speed_diff = abs(left_speed - right_speed)
         wheel_turning = speed_diff > SPEED_DIFF_THRESHOLD
@@ -269,23 +274,38 @@ class Perception:
 
         self.imu.gyro.read()
         gz = self.imu.gyro.last_reading_dps[2] # Z-Achse
+        #self.uart.write(f"{gz}")
 
         self._integrated_z_angle += gz * dt #°
 
-        ROTATIONAL_THRESHOLD = 25 # 25° Änderung zwischen zwei messungen erwwartet
+        #self.uart.write(f"diff speed: {speed_diff}\n")
 
-        corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD
+        ROTATIONAL_THRESHOLD_UPPER = 15 # 25° Änderung zwischen zwei messungen erwwartet
+        ROTATIONAL_THRESHOLD_LOWER = 1.5
+        #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
 
+        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz) >180) :#and gz >40
+            self.uart.write("Jetzt  ")
+            self._corner_detected = True
+            #self._integrated_z_angle =0.0
+        elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER and (abs(gz) < 100):# and gz < 40
+            self.uart.write("Nicht mehr\n")
+            self._corner_detected = False
+            #self._integrated_z_angle = 0.0
+          
+        # self._integrated_z_angle =0.0
+        return self._corner_detected
+        """
         if corner_detected:
-            #self.led_corner.on()#LED anschalten
-            self._integrated_z_angle =0.0
+            if time.ticks_diff(now, self._last_corner_time) > self._corner_cooldown:
+                self._last_corner_time = now       # Cooldown starten
+                self._integrated_z_angle = 0.0       # Angle resetten
+                self.uart.write(f"Jetzt")           # EINMALIG pro Ecke
+                return True
+            else:
+                return False
 
-            return True     
-        else:
-            #self.led_corner.off()#LED wieder ausschalten
-            return False 
-        
-        
+        return False"""
 
     def get_wheel_distance_deviation(self) -> float:
         """
@@ -306,7 +326,7 @@ class Perception:
         import time
 
         print("Initialisiere IMU...")
-        self.imu.enable_default()   # 🔥 WICHTIG!
+        self.imu.enable_default()   #  WICHTIG!
         time.sleep(0.1)
 
         print("Starte Gyroskop-Test... STRG+C zum Stoppen\n")
@@ -356,6 +376,7 @@ class Perception:
 
         except KeyboardInterrupt:
             print("Test beendet.")
+
 
 
 

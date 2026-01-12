@@ -149,7 +149,8 @@ class KinematicController:
     # @param v forward speed
     # @param w turn rate
     def set_vw(self, v: float, w: float):
-        pass
+        self.forward_speed = v
+        self.turn_speed = w
 
     def increase_v(self):
         self.forward_speed += self.manual_sensitivity_fwd

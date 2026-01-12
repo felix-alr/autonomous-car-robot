@@ -206,7 +206,7 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action (nur beim Übergang in anderen Unterzustand)
-                if self.navigation.pose.x == self.start_pose.x and self.navigation.pose.y == self.start_pose.y:   #Prüfen, ob sich Roboter auf Startposition befindet (evtl. muss Toleranz eingebaut werden) 
+                if (abs(self.start_pose.x - self.navigation.pose.x) < 5 and abs(self.start_pose.y - self.navigation.pose.y) < 5):   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.APPROACH
@@ -221,6 +221,7 @@ class GuidanceStateMachine:
 
                 #exit action
                 if self.navigation.pose.phi == self.start_pose.phi:
+                    self.start_pose = self.navigation.pose #Aktualisierung der Startpose mit aktueller Pose nach Ausrichten augrund der Toleranz der Startposition, für erhöhte Genauigkeit bei der Pfadfolge
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.APPROACH
@@ -232,10 +233,11 @@ class GuidanceStateMachine:
                     #Übergabe der Start- und Endpose an den PathFollower fehlt
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
+                #evtl. noch Variable hinzufügen, die dem PathFollower signalisiert, dass es sich um  Einparken handelt (pathstart = self.start_pose)
                 self.control.run()
 
                 #exit action
-                if self.navigation.pose.x == self.end_pose.x and self.navigation.pose.y == self.end_pose.y: # evtl. fehlen
+                if self.navigation.pose.x == self.end_pose.x and self.navigation.pose.y == self.end_pose.y: # evtl. fehlen Toleranzen
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.PARK
@@ -254,6 +256,7 @@ class GuidanceStateMachine:
                     #Übergabe der Start- und Endpose an den PathFollower fehlt
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
+                #evtl. noch Variable hinzufügen, die dem PathFollower signalisiert, dass es sich um  Ausparken handelt (pathstart = self.end_pose)
                 self.control.run()
 
                 #exit action

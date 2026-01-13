@@ -122,12 +122,12 @@ class KinematicController:
         self.forward_speed = 0     # in mm/s  (forward speed of the robot itself)
         self.turn_speed = 0        # in rad/s (turn speed of the robot itself)
 
-        self.manual_sensitivity_fwd = 0.5
-        self.manual_sensitivity_rot = -0.1
+        self.manual_sensitivity_fwd = 10
+        self.manual_sensitivity_rot = -math.pi/4
 
         # PI parameters
-        self.kp = 0.5
-        self.ki = 2
+        self.kp = 0.15
+        self.ki = 0.4
 
         self.i_left = 0
         self.i_right = 0

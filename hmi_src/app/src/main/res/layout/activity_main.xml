@@ -128,10 +128,19 @@
                 android:radius="1dp"
                 android:text="SETUP" />
 
+            <!-- Disconnect-Button -->
+            <Button
+                android:id="@+id/buttonDisconnect"
+                android:layout_width="128dp"
+                android:layout_height="64dp"
+                android:backgroundTint="@color/blue"
+                android:radius="1dp"
+                android:text="Disconnect" />
+
             <TextView
                 android:id="@+id/textViewText"
                 android:layout_width="128dp"
-                android:layout_height="320dp"
+                android:layout_height="160dp"
                 android:text="Text:" >
 
             </TextView>

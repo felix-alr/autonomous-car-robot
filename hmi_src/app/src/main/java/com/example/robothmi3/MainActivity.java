@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity
 
     // UI-Elemente
     private TextView textViewStatus, textViewPosX, textViewPosY, textViewPhi, textViewModus, textViewText;
-    private Button buttonConnect, buttonIdle, buttonScout, buttonParking, buttonSetup;
+    private Button buttonConnect, buttonIdle, buttonScout, buttonParking, buttonSetup, buttonDisconnect;
     private Button parkSlotButton1;
 
     // Handler für wiederkehrende Positionsabfragen
@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity
         buttonScout = findViewById(R.id.buttonScout); //Pfad Erkunden
         buttonParking = findViewById(R.id.buttonParking); //Parkplatz anzeigen
         buttonSetup = findViewById(R.id.buttonSetup); //Kalibrieren
+        buttonDisconnect = findViewById(R.id.buttonDisconnect); //Disconnecten
         //parkSlotButton1 = findViewById(R.id.parkSlotButton1);
 
         // Aktionen für Steuerungsbuttons
@@ -95,6 +96,9 @@ public class MainActivity extends AppCompatActivity
         buttonSetup.setOnClickListener(v -> {
             sendCommand("r\n");
             textViewModus.setText("Modus: SetUp");
+        });
+        buttonDisconnect.setOnClickListener(view -> {
+            disconnectBluetooth();
         });
 
         // Bluetooth-Adapter holen (null, falls Gerät kein Bluetooth unterstützt)
@@ -429,9 +433,56 @@ public class MainActivity extends AppCompatActivity
         System.out.println("onParkingSpotClicked");
     }
     public void sendSpotId(float id){
-        sendCommand("3\r");
-        sendCommand(id+"\r");
-        textViewModus.setText("Einparken: " + id);
+        int ID = (int) id;
+        sendCommand("3 "+ ID+"\r");
+        //sendCommand("3\r");
+        //sendCommand(id+"\r");
+        textViewModus.setText("Einparken: " + ID);
         System.out.println("sendSpotId");
+        //startPositionUpdates();
     }
+    private void disconnectBluetooth() {
+        keepUpdating = false;                     // Positions-Loop stoppen
+        if (positionUpdater != null) {
+            handler.removeCallbacks(positionUpdater); // Runnable aus dem Handler entfernen
+        }
+
+        try {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                reader = null;
+            }
+
+            if (outputStream != null) {
+                try {
+                    outputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                outputStream = null;
+            }
+
+            if (socket != null) {
+                try {
+                    socket.close();              // bricht laufende Operationen ab
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                socket = null;
+            }
+
+            runOnUiThread(() -> {
+                textViewStatus.setText("Bluetooth getrennt");
+                textViewModus.setText("Modus: Getrennt");
+            });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }

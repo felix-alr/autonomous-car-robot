@@ -38,8 +38,8 @@ class ModeController:
         self._motors = Motors()
 
         self.line_follower = LineFollower(self._motors, perception)
-        self.kinematic_controller = (self._motors, self._perception)
-        self.path_follower = PathFollower()
+        self.kinematic_controller = KinematicController(self._motors, self._perception)
+        self.path_follower = PathFollower(self.kinematic_controller)
         self.position_controller = PositionController()
 
     ## Select a specific control algorithm.
@@ -54,7 +54,7 @@ class ModeController:
             self._motors.off()
 
         elif self._mode == ControlMode.Kinematic:
-            self.kinematic_controller.run()
+            self.path_follower.run()
 
         elif self._mode == ControlMode.Line:
             self.line_follower.run()
@@ -182,8 +182,6 @@ class KinematicController:
         eLeft = refLeft - self._perception.get_wheel_speed_left()
         eRight = refRight - self._perception.get_wheel_speed_right()
 
-        # uart_int.write(f"Right: (ref: {refRight}, actual: {self._perception.get_wheel_speed_right()}, actual(calc): {self.yMRight(self._perception.get_wheel_speed_right())}, err: {eRight})\nLeft: (ref: {refLeft}, actual: {self._perception.get_wheel_speed_left()}, actual(calc): {self.yMLeft(self._perception.get_wheel_speed_left())}, err: {eLeft})\n\n")
-
         # Calculation of integral part
         dT = time.ticks_diff(time.ticks_us(), self.prevT) / 1e6
 
@@ -227,11 +225,14 @@ class PathFollower:
         self.kin_ctr = kinematic_controller
 
     def run(self):
-        if self.s < 1:
-            self.kin_ctr.set_vw(self.v(self.s, self.ps, self.pz), self.w(self.s, self.ps, self.pz))
-            self.s += 0.01
+        T = 10
+        if self.s < 10:
+            self.kin_ctr.set_vw(self.v(self.s, self.ps, self.pz, T), self.w(self.s, self.ps, self.pz, T))
+            self.s += 0.1
+            uart_int.write(f"s: {self.s}, v: {self.v(self.s, self.ps, self.pz, T)}, w: {self.w(self.s, self.ps, self.pz, T)}\n")
         else:
             self.kin_ctr.set_vw(0,0)
+        self.kin_ctr.run()
 
 
     def x1(self, s, ps, pz):
@@ -260,15 +261,14 @@ class PathFollower:
     def dds2_x2(self, s, ps, pz):
         a = pz[2] + ps[2] + 2*ps[1] - 2* pz[1]
         b = 3*pz[1] - 3*ps[1] -2*ps[2] - pz[2]
-        c = ps[2]
 
         return 3*a*s + 2*b
 
-    def v(self, s, ps, pz, cv):
-        return math.sqrt(self.dds_x1(s, ps, pz)**2 + self.dds_x2(s, ps, pz)**2) * cv
+    def v(self, s, ps, pz, T):
+        return math.sqrt(self.dds_x1(s, ps, pz)**2 + self.dds_x2(s, ps, pz)**2)/T
 
-    def w(self, s, ps, pz, cw):
-        return math.sqrt(self.dds2_x1(s, ps, pz)**2 + self.dds2_x2(s, ps, pz)**2) * cw
+    def w(self, s, ps, pz, T):
+        return 1/T*(self.dds_x1(s, ps, pz)*self.dds2_x2(s, ps, pz))/((self.dds_x1(s, ps, pz))**2 + (self.dds_x2(s, ps, pz))**2)
 
 ## Controller implementing a position control algorithm.
 class PositionController:

@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.*;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.*;
 import androidx.annotation.Nullable;
@@ -17,12 +18,14 @@ import androidx.core.app.ActivityCompat;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
 import java.lang.Object;
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements MapView.OnParkingSpotClickListener{
 
     //MapView
     private MapView mapView;
@@ -52,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mapView = findViewById(R.id.mapView);
+        mapView.setOnParkingSpotClickListener(this);
 
         // UI-Elemente verknüpfen
         buttonConnect = findViewById(R.id.buttonConnect);
@@ -78,6 +82,8 @@ public class MainActivity extends AppCompatActivity {
         buttonScout.setOnClickListener(v -> {
             sendCommand("y\n");
             textViewModus.setText("Modus: Scout");
+            //ArrayList<ParkingSpot> spots = new ArrayList<ParkingSpot>();
+            //mapView.updateParkingSpots(spots);
         });
         //buttonParking.setOnClickListener(v -> anfrageParkingSpots());
         buttonParking.setOnClickListener(v -> {
@@ -228,12 +234,14 @@ public class MainActivity extends AppCompatActivity {
                         String posX = reader.readLine();
                         String posY = reader.readLine();
                         String phi = reader.readLine();
+                        //String dst = reader.readLine();
 
                         // UI mit neuer Position aktualisieren
                         runOnUiThread(() -> {
                             textViewPosX.setText("X: " + posX);
                             textViewPosY.setText("Y: " + posY);
                             textViewPhi.setText("Phi: " + phi);
+                            //textViewDst.setText("Dst: " + dst);
 
                             // position updaten
                             float x = Float.parseFloat(posX);
@@ -242,10 +250,10 @@ public class MainActivity extends AppCompatActivity {
                             y = -y; // Koordinatensystem umdrehen
 
                             //Umrechnung cm -> pixel/dp
-                            float scale = 1.13f; // umrechnung vgl Karte
-                            x = x*scale;
-                            y = y*scale;
-                            p = p*scale;
+                            float scaleX = 1.1167f; // umrechnung vgl Karte
+                            float scaleY = 1.109167f; // umrechnung vgl Karte
+                            x = x*scaleX;
+                            y = y*scaleY;
 
                             mapView.updateRobotPose(x, y, p);
                         });
@@ -371,15 +379,59 @@ public class MainActivity extends AppCompatActivity {
         String[] tokens = buffer.toString().split(";");
 
         for (int i = 0; i + 5 < tokens.length; i += 6) {
-            float id = Float.parseFloat(tokens[i]);
-            float x1 = Float.parseFloat(tokens[i + 1]);
-            float y1 = Float.parseFloat(tokens[i + 2]);
-            float x2 = Float.parseFloat(tokens[i + 3]);
-            float y2 = Float.parseFloat(tokens[i + 4]);
-            float suitable = Float.parseFloat(tokens[i + 5]);
 
-            spots.add(new ParkingSpot(id, x1, y1, x2, y2, suitable));
+            spots.add(createParkingSpot(Arrays.copyOfRange(tokens, i, i+6)));
         }
         return spots;
+    }
+
+    private ParkingSpot createParkingSpot(String[] data){
+        float id = Float.parseFloat(data[0]);
+        float x1 = Float.parseFloat(data[1]);
+        float y1 = Float.parseFloat(data[2]);
+        float x2 = Float.parseFloat(data[3]);
+        float y2 = Float.parseFloat(data[4]);
+        float suitable = Float.parseFloat(data[5]);
+
+        float scaleX = 1.1167f;
+        float scaleY = 1.09167f;
+
+        float xStart = x1;
+        float yStart = y1;
+        float xEnd   = x2;
+        float yEnd   = y2;
+
+        float offsetX = 250;
+        float offsetY = 775;
+
+        if (yStart == yEnd) {// Horizontale Parklücke Nach Unten
+            xStart = offsetX + xStart * scaleX;
+            yStart = offsetY - yStart * scaleY;
+            xEnd = offsetX + xEnd * scaleX;
+            yEnd = offsetY - (yEnd - 125) * scaleY;
+        } else if (xStart == xEnd && yStart < yEnd) { // Vertikale Parklücke Nach Rechts
+            xStart = offsetX+xStart*scaleX;
+            yStart = offsetY-y2*scaleY;
+            xEnd   = offsetX+(xEnd+125)*scaleX;
+            yEnd   = offsetY-y1*scaleY;
+        } else if (xStart == xEnd && yStart> yEnd) { // Vertikale Parklücke Nach Links
+            xStart = offsetX+(xStart-125)*scaleX;
+            yStart = offsetY-yStart*scaleY;
+            xEnd   = offsetX+xEnd*scaleX;
+            yEnd   = offsetY-yEnd*scaleY;
+        }
+
+        return new ParkingSpot(id, xStart, yStart, xEnd, yEnd, suitable);
+    }
+
+    public void onParkingSpotClicked(float spotId) {
+        sendSpotId(spotId);
+        System.out.println("onParkingSpotClicked");
+    }
+    public void sendSpotId(float id){
+        sendCommand("3\r");
+        sendCommand(id+"\r");
+        textViewModus.setText("Einparken: " + id);
+        System.out.println("sendSpotId");
     }
 }

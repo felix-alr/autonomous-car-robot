@@ -131,6 +131,7 @@ class Navigation:
         self.per = per
         self.has_flag = False
         self.pose = Pose()
+        self.corner_correction_enabled = True
         #Kommunikation (Test)
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
@@ -174,12 +175,16 @@ class Navigation:
     def update(self):
         self.pose_filter.update()
         # including flag for corners 
+        if not self.corner_correction_enabled:
+        # im Setup: weder Corner noch Parklücken-Scan
+            return
+        
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
             self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
             min_dist = float('inf')  
             self.closest_point = None
-               # Iterate through the list and determine which point has the shortest distance to the current position.   
+            # Iterate through the list and determine which point has the shortest distance to the current position.   
             for element in self.corners:
                 dist = sqrt((element.x - self.pose.x)**2 + (element.y - self.pose.y)**2)
                 if dist < min_dist:
@@ -192,7 +197,7 @@ class Navigation:
             self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
             self.has_flag = False
             
-        self.scan_parking_spots()
+        self.scan_parking_spots()   
 
         # Add further function calls to be executed here.
 
@@ -237,6 +242,11 @@ class Navigation:
     def reset(self):
         self.pose_filter.reset()
 
+    def get_counts(self):
+        right_count, left_count = self.per.encoders.get_counts()
+        return right_count, left_count
+
+
     ## Return all perceived parking spots.
     #
     # @returns dict of ids and respective ParkingSpots
@@ -256,7 +266,6 @@ class Navigation:
             phi = abs(self.pose_start.phi - self.pose_end.phi)  # calculating angle between two points to filter out the corners
 
             if a > 50 and phi < 25: # checking if it is real parkingspot
-                new_id = len(self.parking_spots)+1  # new id for new parkingslot
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
 
@@ -285,6 +294,25 @@ class Navigation:
                      
                 spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size)    #creating new spot
 
+                new_center_x, new_center_y, new_length = self.spot_features(spot)
+
+                for element in self.parking_spots.values():
+                    ex_center_x, ex_center_y, ex_length = self.spot_features(element)
+                    if (math.sqrt((new_center_x - ex_center_x)**2 + (new_center_y - ex_center_y)**2) < 40) and (abs(new_length - ex_length)<40):
+                        return
+
+                new_id = len(self.parking_spots)+1  # new id for new parkingslot
                 self.parking_spots[new_id] = spot   #adding to dict
   
         return 
+
+
+    def spot_features(self, spot:ParkingSpot):
+        x1 = spot.x1
+        x2 = spot.x2
+        y1 = spot.y1
+        y2 = spot.y2
+        cx = 0.5*(x1 + x2)
+        cy = 0.5*(y1 + y2)
+        length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        return cx, cy, length

@@ -174,7 +174,7 @@ class Navigation:
     def update(self):
         self.pose_filter.update()
         # including flag for corners 
-        if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
+        """  if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
             self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
             min_dist = float('inf')  
@@ -190,7 +190,7 @@ class Navigation:
         #   resets the has_flag variable
         if self.per.get_corner() == False and self.has_flag == True:
             self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
-            self.has_flag = False
+            self.has_flag = False"""
             
         self.scan_parking_spots()
 

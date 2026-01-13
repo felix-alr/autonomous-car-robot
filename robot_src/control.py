@@ -7,7 +7,7 @@ import time
 import parameters
 
 from perception import Perception
-from navigation import Navigation
+from navigation import RAD_TO_DEG, Navigation
 import parameters
 import math
 
@@ -239,12 +239,40 @@ class PathFollower:
 
 ## Controller implementing a position control algorithm.
 class PositionController:
-    def __init__(self):
+    def __init__(self, perception, navigation):
         self.target = (0, 0)
+        self.nav = navigation
+        self.kv = 0.01 #gain controller
+        self.kp = 0.01 #gain controller
+        self.thresh = 1.0
+
+
+        self.forward_speed = 6000 * self.duty_cycle  # PWM or 0??
+        self.turn_speed = 0.0
 
     ## Set target position with x and y coordinate.
     def set_position(self, x, y):
         self.target = (x, y)
+
         
     def run(self):
-        pass
+        x, y = self.nav.get_position()
+        xd, yd = self.target
+        phi = self.nav.get_pose().phi
+
+        ex = xd - x
+        ey = yd - y 
+        phi_des = math.atan2(ey,ex)
+
+
+        Vd = self.kv*math.sqrt((ex**2)+(ey**2))
+        w = self.kp*(phi_des - phi)
+
+
+        if Vd < self.thresh:
+            self.forward_speed = 0.0
+            self.turn_speed = 0.0
+            return
+
+        v = self.kv * Vd
+        

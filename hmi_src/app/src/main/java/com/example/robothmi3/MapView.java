@@ -158,6 +158,7 @@ public class MapView extends View {
         if (action == MotionEvent.ACTION_DOWN) {
             ParkingSpot clickedSpot = checkParkingSpot(posX,posY);
             if (clickedSpot != null){
+                System.out.println("Spot Valid And Clicked");
                 listener.onParkingSpotClicked(clickedSpot.id);
             }
             return true;
@@ -174,8 +175,13 @@ public class MapView extends View {
         return null;
     }
 
-    private boolean isBetween(float test, float max, float min){
-        return (test < max && test > min);
+    private boolean isBetween(float value, float v1, float v2){
+        if(v1 >= v2) {
+            return (value < v1 && value > v2);
+        }else {
+            return (value > v1 && value < v2);
+        }
+
     }
 
     /**

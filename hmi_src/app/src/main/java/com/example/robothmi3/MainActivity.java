@@ -82,14 +82,13 @@ public class MainActivity extends AppCompatActivity
         buttonScout.setOnClickListener(v -> {
             sendCommand("y\n");
             textViewModus.setText("Modus: Scout");
-            ArrayList<ParkingSpot> spots = new ArrayList<ParkingSpot>();
-            mapView.updateParkingSpots(spots);
+            //ArrayList<ParkingSpot> spots = new ArrayList<ParkingSpot>();
+            //mapView.updateParkingSpots(spots);
         });
         //buttonParking.setOnClickListener(v -> anfrageParkingSpots());
         buttonParking.setOnClickListener(v -> {
             anfrageParkingSpots();
             textViewModus.setText("Modus: Parking");
-            //auswahlParkingSpot();
         });
         //parkSlotButton1.setOnClickListener(v -> sendCommand("3\n"));
         //buttonSetup.setOnClickListener(v -> sendCommand("r\n"));
@@ -235,12 +234,14 @@ public class MainActivity extends AppCompatActivity
                         String posX = reader.readLine();
                         String posY = reader.readLine();
                         String phi = reader.readLine();
+                        //String dst = reader.readLine();
 
                         // UI mit neuer Position aktualisieren
                         runOnUiThread(() -> {
                             textViewPosX.setText("X: " + posX);
                             textViewPosY.setText("Y: " + posY);
                             textViewPhi.setText("Phi: " + phi);
+                            //textViewDst.setText("Dst: " + dst);
 
                             // position updaten
                             float x = Float.parseFloat(posX);
@@ -379,16 +380,7 @@ public class MainActivity extends AppCompatActivity
 
         for (int i = 0; i + 5 < tokens.length; i += 6) {
 
-            spots.add(createParkingSpot(Arrays.copyOfRange(tokens, i, i+5)));
-
-            //float id = Float.parseFloat(tokens[i]);
-            //float x1 = Float.parseFloat(tokens[i + 1]);
-            //float y1 = Float.parseFloat(tokens[i + 2]);
-            //float x2 = Float.parseFloat(tokens[i + 3]);
-            //float y2 = Float.parseFloat(tokens[i + 4]);
-            //float suitable = Float.parseFloat(tokens[i + 5]);
-
-            //spots.add(new ParkingSpot(id, x1, y1, x2, y2, suitable));
+            spots.add(createParkingSpot(Arrays.copyOfRange(tokens, i, i+6)));
         }
         return spots;
     }
@@ -434,10 +426,12 @@ public class MainActivity extends AppCompatActivity
 
     public void onParkingSpotClicked(float spotId) {
         sendSpotId(spotId);
+        System.out.println("onParkingSpotClicked");
     }
     public void sendSpotId(float id){
-        sendCommand("4\r");
+        sendCommand("3\r");
         sendCommand(id+"\r");
+        textViewModus.setText("Einparken: " + id);
+        System.out.println("sendSpotId");
     }
-
 }

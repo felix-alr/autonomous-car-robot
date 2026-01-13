@@ -8,6 +8,11 @@ from communication import Communicator
 from utils import Display
 
 from pololu_3pi_2040_robot import motors
+from navigation import Pose
+
+# For debugging -----------------
+from machine import Pin, UART
+uart = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
 SETUP_SPEED = 600
 
@@ -46,6 +51,7 @@ class GuidanceStateMachine:
         self.current_parking_state = None
         self.last_parking_state = None
         
+        self.parking_spots = None
         self.current_parking_spot = None
         self.start_pose = None
         self.end_pose = None
@@ -69,25 +75,31 @@ class GuidanceStateMachine:
         id = self.com.receive_target_spot()
         # todo students: request suitable GuidanceState here, process the id ...
         self.request_state(GuidanceState.PARKING)
-        self.current_parking_spot = self.navigation.parking_spots[id]
+        spots = self.navigation.get_parking_spots()
+        self.current_parking_spot = spots[id]
+
+        # uart.write(f"{self.current_parking_spot}")
 
     ## Generate start and end poses for the parking maneuver.
     def generate_parking_path(self):
-        x1 = self.navigation.parking_spots[self.current_parking_spot].x1
-        y1 = self.navigation.parking_spots[self.current_parking_spot].y1
-        x2 = self.navigation.parking_spots[self.current_parking_spot].x2
-        y2 = self.navigation.parking_spots[self.current_parking_spot].y2
+        spot = self.current_parking_spot
+
+        x1 = spot.x1
+        y1 = spot.y1
+        x2 = spot.x2
+        y2 = spot.y2
+
 
         if x1 == x2:
             if y1 > y2:
-                self.start_pose = self.navigation.pose(x1+ 100, y1, 270)
-                self.end_pose = self.navigation.pose(x1 - 75, (y1 + y2)/2, 270)
+                self.start_pose = Pose(x1+ 100, y1, 270)
+                self.end_pose = Pose(x1 - 75, (y1 + y2)/2, 270)
             else:
-                self.start_pose = self.navigation.pose(x1 - 100, y1, 90)
-                self.end_pose = self.navigation.pose(x1 + 75, (y1 + y2) / 2, 90)
+                self.start_pose = Pose(x1 - 100, y1, 90)
+                self.end_pose = Pose(x1 + 75, (y1 + y2) / 2, 90)
         else:
-            self.start_pose = self.navigation.pose(x1, y1 + 100, 0)
-            self.end_pose = self.navigation.pose((x1 + x2) / 2, y1 - 75, 0)
+            self.start_pose = Pose(x1, y1 + 100, 0)
+            self.end_pose = Pose((x1 + x2) / 2, y1 - 75, 0)
 
 
 
@@ -206,7 +218,8 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action (nur beim Übergang in anderen Unterzustand)
-                if (abs(self.start_pose.x - self.navigation.pose.x) < 5 and abs(self.start_pose.y - self.navigation.pose.y) < 5):   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
+                pose = self.navigation.get_pose()
+                if abs(self.start_pose.x - pose.x) < 20 and abs(self.start_pose.y - pose.y) < 20:   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.APPROACH
@@ -221,8 +234,8 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action
-                if self.navigation.pose.phi == self.start_pose.phi:
-                    self.start_pose = self.navigation.pose #Aktualisierung der Startpose mit aktueller Pose nach Ausrichten augrund der Toleranz der Startposition, für erhöhte Genauigkeit bei der Pfadfolge
+                if self.navigation.get_pose().phi == self.start_pose.phi:
+                    self.start_pose = self.navigation.get_pose() #Aktualisierung der Startpose mit aktueller Pose nach Ausrichten augrund der Toleranz der Startposition, für erhöhte Genauigkeit bei der Pfadfolge
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.APPROACH
@@ -238,7 +251,7 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action
-                if self.navigation.pose.x == self.end_pose.x and self.navigation.pose.y == self.end_pose.y: # evtl. fehlen Toleranzen
+                if self.navigation.get_pose().x == self.end_pose.x and self.navigation.get_pose().y == self.end_pose.y: # evtl. fehlen Toleranzen
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.PARK
@@ -261,7 +274,7 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action
-                if self.navigation.pose.x == self.start_pose.x and self.navigation.pose.y == self.start_pose.y:   #Prüfen, ob sich Roboter auf Startposition befindet (evtl. muss Toleranz eingebaut werden) 
+                if self.navigation.get_pose().x == self.start_pose.x and self.navigation.get_pose().y == self.start_pose.y:   #Prüfen, ob sich Roboter auf Startposition befindet (evtl. muss Toleranz eingebaut werden) 
                     self.request_state(GuidanceState.SCOUT)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()

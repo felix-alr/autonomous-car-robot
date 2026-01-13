@@ -429,9 +429,10 @@ public class MainActivity extends AppCompatActivity
         System.out.println("onParkingSpotClicked");
     }
     public void sendSpotId(float id){
-        sendCommand("3\r");
-        sendCommand(id+"\r");
-        textViewModus.setText("Einparken: " + id);
+        int ID = (int) id;
+        sendCommand("3 " + ID + "\r");
+        //sendCommand(ID+"\r");
+        textViewModus.setText("Einparken: " + ID);
         System.out.println("sendSpotId");
     }
 }

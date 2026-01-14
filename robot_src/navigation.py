@@ -134,6 +134,7 @@ class Navigation:
         self.pose = Pose()
         self.corner_correction_enabled = True   #Variable zur Aktivierung/Deaktivierung von Eckenerkennung (für Setup)
         self.axis_lock_enabled = True #Variable zur Aktivierung/Deaktivierung der festen Koordinatenachsen
+        self.set_angle_at_corner = True #Variable zur Aktivierung/Deaktivierung der Winkelaktualisierung an den Ecken
         #Kommunikation (Test)
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
@@ -166,6 +167,7 @@ class Navigation:
             ]
          
         self.closest_line = self.parcours[0]
+        self.idx = -1
 
     ## Return a map of the parcours.
     #
@@ -190,18 +192,24 @@ class Navigation:
         
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
-            self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
+            #self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
             # finding closest point to current position
-            self.closest_point, idx = self.find_closest_point()
+            self.closest_point, self.idx = self.find_closest_point()
             # find closest line from closest point
-            self.closest_line = self.parcours[idx]
+            self.closest_line = self.parcours[self.idx]
             # set x,y to closest corner
             self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
-            self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}\n")
-        #   resets the has_flag variable
+            #self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}\n")
+        #   resets the has_flag variabled
         if self.per.get_corner() == False and self.has_flag == True:
             # set phi to target-angle when corner is over
-            self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
+            self.set_angle_at_corner = False
+            if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
+                self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
+                #self.uart.write(f"Winkel wird nicht gesetzt")
+            else:
+                self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
+                #self.uart.write(f"Winkel gesetzt")
             self.has_flag = False
 
         if self.axis_lock_enabled == True:
@@ -289,7 +297,7 @@ class Navigation:
 
 
     ## Return all perceived parking spots.
-    #
+    
     # @returns dict of ids and respective ParkingSpots
     def get_parking_spots(self) -> dict:
         return self.parking_spots

@@ -196,7 +196,9 @@ class GuidanceStateMachine:
 
         elif self.current_state == GuidanceState.SCOUT:
             if self.current_state != self.last_state:
+                self.navigation.axis_lock_enabled = True # axis lock nach Parken wieder einschalten
                 self.navigation.corner_correction_enabled = True    #Eckenerkennung darf aktiviert werden
+                self.navigation.set_angle_at_corner = True #"Winkel an Ecken setzen" nach Parken wieder aktivieren
                 # entry action
                 self.control.set_mode(ControlMode.Line)
                 self.current_parking_state = GuidanceParkingState.APPROACH #Damit der Roboter nach der Parklückensuche beim Übergang in den Zustand parking immer erstmal die Parklücke anfährt
@@ -217,13 +219,15 @@ class GuidanceStateMachine:
             if self.current_parking_state == GuidanceParkingState.APPROACH:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
+                    self.navigation.set_angle_at_corner = False # beim Anfahren den Winkel nicht zurücksetzen
                     self.control.set_mode(ControlMode.Line)
                 # nominal action
                 self.control.run()
+                self.display.text_line("anfahren", 1)
 
                 #exit action (nur beim Übergang in anderen Unterzustand)
                 pose = self.navigation.get_pose()
-                if abs(self.start_pose.x - pose.x) < 20 and abs(self.start_pose.y - pose.y) < 20:   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
+                if abs(self.start_pose.x - pose.x) < 20 and abs(self.start_pose.y - pose.y) < 10:   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
@@ -232,13 +236,15 @@ class GuidanceStateMachine:
             if self.current_parking_state == GuidanceParkingState.ALIGN:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
+                    self.navigation.axis_lock_enabled = False
                     self.control.set_mode(ControlMode.Kinematic)
                     self.control.kinematic_controller.set_vw(0, 1) # Wert verändern?
                 # nominal action
+                self.display.text_line("ausrichten", 1)
                 self.control.run()
 
                 #exit action
-                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 1):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 5 Grad
+                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 0.5):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 5 Grad
                     self.start_pose = self.navigation.get_pose() #Aktualisierung der Startpose mit aktueller Pose nach Ausrichten augrund der Toleranz der Startposition, für erhöhte Genauigkeit bei der Pfadfolge
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
@@ -252,6 +258,7 @@ class GuidanceStateMachine:
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
                 #evtl. noch Variable hinzufügen, die dem PathFollower signalisiert, dass es sich um  Einparken handelt (pathstart = self.start_pose)
+                self.display.text_line("einparken", 1)
                 self.control.run()
 
                 #exit action

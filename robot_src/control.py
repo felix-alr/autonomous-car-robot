@@ -119,35 +119,29 @@ class KinematicController:
         self._motors = motors
         self._perception = perception
 
-        self.forward_speed = 0
-        self.turn_speed = 0
-        self.manual_sensitivity_fwd = 0.5
-        self.manual_sensitivity_rot = -0.1
+        self.forward_speed = 0     # in mm/s  (forward speed of the robot itself)
+        self.turn_speed = 0        # in rad/s (turn speed of the robot itself)
 
-        self.prevT = 0
+        self.manual_sensitivity_fwd = 10
+        self.manual_sensitivity_rot = -math.pi/4
 
         # PI parameters
-        self.Kp = 0.5
-        self.Ki = 2
+        self.kp = 0.15
+        self.ki = 0.4
 
-        self.iLeft = 0
-        self.iRight = 0
+        self.i_left = 0
+        self.i_right = 0
 
-        self.maxWheelSpeed = 6000
-        self.safetyFactor = 0.8
+        self.prev_t = 0
 
-        # Debugging variables
-        # self.data = [] # [ref, devL, devR, speedL, speedR, deltaSpeed, deltaYMCalc]
-        # self.apPrevT = 0
-        # self.ap = False
-        # self.stop = False
-        # self.start = True
-        # self.debug = False
+        # Safety parameters
+        self.max_motor_speed_value = 6000
+        self.safety_factor = 0.8
 
     ## Set movement setpoint.
     #
-    # @param v forward speed
-    # @param w turn rate
+    # @param v forward speed of the robot in mm/s
+    # @param w turn rate of the robot in rad/s
     def set_vw(self, v: float, w: float):
         self.forward_speed = v
         self.turn_speed = w
@@ -169,37 +163,40 @@ class KinematicController:
         return self.turn_speed
 
     def run(self):
+        # Convert desired forward speed in mm/s to required wheel turn speed in rad/s
+        v_w = self.forward_speed / parameters.ROBOT_WHEEL_RADIUS
+        # Convert desired turn speed of the robot in rad/s to required wheel turn speed in rad/s
+        omega_w = self.turn_speed * (parameters.ROBOT_WHEEL_DISTANCE/parameters.ROBOT_WHEEL_RADIUS)
 
         # PID control loop
-        if (self.prevT == 0):
-            self.prevT = time.ticks_us()
+        if (self.prev_t == 0):
+            self.prev_t = time.ticks_us()
             return
 
         # Reference speeds
-        refLeft = self.forward_speed - (self.turn_speed * parameters.ROBOT_WHEEL_DISTANCE / 2)
-        refRight = self.forward_speed + (self.turn_speed * parameters.ROBOT_WHEEL_DISTANCE / 2)
+        refLeft = v_w - (omega_w/2)
+        refRight = v_w + (omega_w/2)
 
+        # Errors
         eLeft = refLeft - self._perception.get_wheel_speed_left()
         eRight = refRight - self._perception.get_wheel_speed_right()
 
-        # uart_int.write(f"Right: (ref: {refRight}, actual: {self._perception.get_wheel_speed_right()}, actual(calc): {self.yMRight(self._perception.get_wheel_speed_right())}, err: {eRight})\nLeft: (ref: {refLeft}, actual: {self._perception.get_wheel_speed_left()}, actual(calc): {self.yMLeft(self._perception.get_wheel_speed_left())}, err: {eLeft})\n\n")
+        # Integral part
+        dT = time.ticks_diff(time.ticks_us(), self.prev_t) / 1e6
 
-        # Calculation of integral part
-        dT = time.ticks_diff(time.ticks_us(), self.prevT) / 1e6
+        self.i_left += eLeft * dT
+        self.i_right += eRight * dT
 
-        self.iLeft += eLeft * dT
-        self.iRight += eRight * dT
-
-        self.prevT = time.ticks_us()
+        self.prev_t = time.ticks_us()
 
         # Manipulated variables
-        mLeft = refLeft + self.Kp * eLeft + self.Ki * (self.iLeft)
-        mRight = refRight + self.Kp * eRight + self.Ki * (self.iRight)
+        mLeft = refLeft + self.kp * eLeft + self.ki * (self.i_left)
+        mRight = refRight + self.kp * eRight + self.ki * (self.i_right)
 
         # Set motor speeds
         self._motors.set_speeds(
-            max(min(self.yMLeft(mLeft), self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed),
-            max(min(self.yMLeft(mRight), self.safetyFactor * self.maxWheelSpeed), -self.safetyFactor * self.maxWheelSpeed))
+            max(min(self.yMLeft(mLeft), self.safety_factor * self.max_motor_speed_value), -self.safety_factor * self.max_motor_speed_value),
+            max(min(self.yMLeft(mRight), self.safety_factor * self.max_motor_speed_value), -self.safety_factor * self.max_motor_speed_value))
 
     # yM (for the right motor) as a function of right wheel speed
     def yMRight(self, wheel_speed_right):

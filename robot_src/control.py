@@ -220,7 +220,7 @@ class PathFollower:
     def __init__(self, kinematic_controller: KinematicController):
         self.s = 0
         self.ps = [0, 0, 0]
-        self.pz = [200,200,0]
+        self.pz = [500,500,0]
         self.kin_ctr = kinematic_controller
 
         # Time parameters for measurement
@@ -281,7 +281,7 @@ class PathFollower:
         return (self.dds_x1(s, ps, pz)*self.dds2_x2(s, ps, pz) - self.dds2_x1(s, ps, pz)*self.dds_x2(s, ps, pz))/((self.dds_x1(s, ps, pz))**2 + (self.dds_x2(s, ps, pz))**2)
 
     def get_delta_s(self, delta_x, s, ps, pz):
-        return math.sqrt(delta_x**2 - (self.dds_x2(s, ps, pz))**2)
+        return delta_x / math.sqrt(1 + (self.dds_x2(s, ps, pz))**2)
 
 ## Controller implementing a position control algorithm.
 class PositionController:

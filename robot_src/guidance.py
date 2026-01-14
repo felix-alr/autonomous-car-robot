@@ -101,7 +101,9 @@ class GuidanceStateMachine:
             self.start_pose = Pose(x1, y1 + 100, 0)
             self.end_pose = Pose((x1 + x2) / 2, y1 - 75, 0)
 
-
+    ## Support function for tolerance in position checking.
+    def near(self, a, b, tolerance):
+        return abs(a - b) < tolerance
 
     ## Request the state of next execution.
     def request_state(self, state: GuidanceState):
@@ -222,7 +224,7 @@ class GuidanceStateMachine:
                 if abs(self.start_pose.x - pose.x) < 20 and abs(self.start_pose.y - pose.y) < 20:   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
-                    self.last_parking_state = GuidanceParkingState.APPROACH
+                    self.last_parking_state = self.current_parking_state
                     self.current_parking_state = GuidanceParkingState.ALIGN
             # ausrichten
             if self.current_parking_state == GuidanceParkingState.ALIGN:
@@ -234,11 +236,11 @@ class GuidanceStateMachine:
                 self.control.run()
 
                 #exit action
-                if self.navigation.get_pose().phi == self.start_pose.phi:
+                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 1):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 5 Grad
                     self.start_pose = self.navigation.get_pose() #Aktualisierung der Startpose mit aktueller Pose nach Ausrichten augrund der Toleranz der Startposition, für erhöhte Genauigkeit bei der Pfadfolge
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
-                    self.last_parking_state = GuidanceParkingState.APPROACH
+                    self.last_parking_state = self.current_parking_state
                     self.current_parking_state = GuidanceParkingState.PARK
             # einparken
             if self.current_parking_state == GuidanceParkingState.PARK:
@@ -254,7 +256,7 @@ class GuidanceStateMachine:
                 if self.navigation.get_pose().x == self.end_pose.x and self.navigation.get_pose().y == self.end_pose.y: # evtl. fehlen Toleranzen
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
-                    self.last_parking_state = GuidanceParkingState.PARK
+                    self.last_parking_state = self.current_parking_state
                     self.current_parking_state = GuidanceParkingState.HOLD
             # halten
             if self.current_parking_state == GuidanceParkingState.HOLD:
@@ -278,7 +280,7 @@ class GuidanceStateMachine:
                     self.request_state(GuidanceState.SCOUT)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
-                    self.last_parking_state = GuidanceParkingState.LEAVE
+                    self.last_parking_state = self.current_parking_state
 
             if self.requested_state and self.requested_state != GuidanceState.PARKING:
                 # exit action

@@ -130,7 +130,10 @@ class Navigation:
         self.parking_spot_size = 180
         self.per = per
         self.has_flag = False
+        
         self.pose = Pose()
+        self.corner_correction_enabled = True   #Variable zur Aktivierung/Deaktivierung von Eckenerkennung (für Setup)
+        self.axis_lock_enabled = True #Variable zur Aktivierung/Deaktivierung der festen Koordinatenachsen
         #Kommunikation (Test)
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
@@ -144,7 +147,14 @@ class Navigation:
         #     Line(...),
         #     ...
         # ]
-        self.parcours: list[Line] = []
+        self.parcours = [
+            Line(0,0,300,0),
+            Line(300,0,300,300),
+            Line(300,300,800,300),
+            Line(800,300,800,600),
+            Line(800,600,0,600),
+            Line(0,600,0,0),
+        ]
 
         self.corners = [
             Pose(0,0,0), 
@@ -155,7 +165,7 @@ class Navigation:
             Pose(0,600,270),
             ]
          
-        
+        self.closest_line = self.parcours[0]
 
     ## Return a map of the parcours.
     #
@@ -174,27 +184,58 @@ class Navigation:
     def update(self):
         self.pose_filter.update()
         # including flag for corners 
+        if not self.corner_correction_enabled:
+        # im Setup: weder Corner noch Parklücken-Scan
+            return
+        
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
             self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
-            min_dist = float('inf')  
-            self.closest_point = None
-               # Iterate through the list and determine which point has the shortest distance to the current position.   
-            for element in self.corners:
-                dist = sqrt((element.x - self.pose.x)**2 + (element.y - self.pose.y)**2)
-                if dist < min_dist:
-                    min_dist = dist
-                    self.closest_point = element
+            # finding closest point to current position
+            self.closest_point, idx = self.find_closest_point()
+            # find closest line from closest point
+            self.closest_line = self.parcours[idx]
+            # set x,y to closest corner
             self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
             self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}\n")
         #   resets the has_flag variable
         if self.per.get_corner() == False and self.has_flag == True:
+            # set phi to target-angle when corner is over
             self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
             self.has_flag = False
+
+        if self.axis_lock_enabled == True:
+
+            #  when x coordninate does not change 
+            if self.closest_line.x_end == self.closest_line.x_start:
+                #lock x coordinate 
+                self.set_pose_no_sync(self.closest_line.x_start, self.pose.y, self.pose.phi)
+            # when y coordninate does not change 
+            elif self.closest_line.y_end == self.closest_line.y_start:
+                # lock y coordniate
+                self.set_pose_no_sync(self.pose.x, self.closest_line.y_start, self.pose.phi)
+            else:
+                self.set_pose_no_sync(self.pose.x, self.pose.y, self.pose.phi)
+ 
             
-        self.scan_parking_spots()
+        self.scan_parking_spots()   
 
         # Add further function calls to be executed here.
+   
+    #function to find closest corner from current position. It returns the closest point and the list index 
+    def find_closest_point(self):
+        min_dist = float('inf')  
+        closest_point = None
+        closest_idx = 0
+        # Iterate through the list and determine which point has the shortest distance to the current position.   
+        for idx, element in enumerate(self.corners):
+            dist = sqrt((element.x - self.pose.x)**2 + (element.y - self.pose.y)**2)
+            if dist < min_dist:
+                min_dist = dist
+                closest_point = element
+                closest_idx = idx
+        return closest_point, closest_idx
+
 
     # set_pose to a fixed vatue (Eckenflag)
     def set_pose(self, x:float, y:float, phi:float):
@@ -204,6 +245,11 @@ class Navigation:
         # Synchronize the stored encoder counts with the current hardware values 
         # to prevent a false position jump after manually setting the robot pose
         self.pose_filter.last_counts_left, self.pose_filter.last_counts_right = self.per.encoders.get_counts() 
+
+    def set_pose_no_sync(self, x:float, y:float, phi:float):
+        self.pose.x = x
+        self.pose.y = y
+        self.pose.phi = phi
 
     ## Return the current Pose.
     def get_pose(self) -> Pose:
@@ -237,6 +283,11 @@ class Navigation:
     def reset(self):
         self.pose_filter.reset()
 
+    def get_counts(self):
+        right_count, left_count = self.per.encoders.get_counts()
+        return right_count, left_count
+
+
     ## Return all perceived parking spots.
     #
     # @returns dict of ids and respective ParkingSpots
@@ -247,16 +298,17 @@ class Navigation:
     def scan_parking_spots(self):
         if self.per.get_distance() > 100 and self.has_parkingspot == False: #Trigger for start_pose  
             self.has_parkingspot = True
-            self.pose_start = Pose(self.pose.x, self.pose.y, self.pose.phi) # safe start pose 
+            sx, sy = self.shift_along_heading(self.pose, 16)
+            self.pose_start = Pose(sx, sy, self.pose.phi) # safe start pose 
         
         if self.per.get_distance() <= 100 and self.has_parkingspot == True: # Trigger for end_pose 
             self.has_parkingspot = False 
-            self.pose_end = Pose(self.pose.x, self.pose.y, self.pose.phi)   # safe end pose 
+            sx, sy = self.shift_along_heading(self.pose, 16)
+            self.pose_end = Pose(sx, sy, self.pose.phi)   # safe end pose 
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
-            phi = abs(self.pose_start.phi - self.pose_end.phi)  # calculating angle between two points to filter out the corners
+            phi = self.angle_diff_deg(self.pose_start.phi, self.pose_end.phi)   # calculating angle between two points to filter out the corners
 
-            if a > 50 and phi < 25: # checking if it is real parkingspot
-                new_id = len(self.parking_spots)+1  # new id for new parkingslot
+            if a > 50 and phi < 30: # checking if it is real parkingspot
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
 
@@ -285,6 +337,33 @@ class Navigation:
                      
                 spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size)    #creating new spot
 
+                new_center_x, new_center_y, new_length = self.spot_features(spot)
+
+                for element in self.parking_spots.values():
+                    ex_center_x, ex_center_y, ex_length = self.spot_features(element)
+                    if (math.sqrt((new_center_x - ex_center_x)**2 + (new_center_y - ex_center_y)**2) < 40) and (abs(new_length - ex_length)<40):
+                        return
+
+                new_id = len(self.parking_spots)+1  # new id for new parkingslot
                 self.parking_spots[new_id] = spot   #adding to dict
   
         return 
+
+
+    def spot_features(self, spot:ParkingSpot):
+        x1 = spot.x1
+        x2 = spot.x2
+        y1 = spot.y1
+        y2 = spot.y2
+        cx = 0.5*(x1 + x2)
+        cy = 0.5*(y1 + y2)
+        length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        return cx, cy, length
+    
+    def angle_diff_deg(self, a, b):
+        d = (a - b + 180) % 360 - 180
+        return abs(d)
+    
+    def shift_along_heading(self, pose: Pose, dx: float):
+        phi = pose.phi * DEG_TO_RAD
+        return pose.x + math.cos(phi)*dx, pose.y + math.sin(phi)*dx

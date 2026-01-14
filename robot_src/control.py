@@ -54,11 +54,10 @@ class ModeController:
             self._motors.off()
 
         elif self._mode == ControlMode.Kinematic:
-            self.path_follower.run()
+            self.path_follower.run()   # CHANGE BACK TO KINEMATIC CONTROLLER --------------------------------------- !!!
 
         elif self._mode == ControlMode.Line:
             self.line_follower.run()
-
 
         elif self._mode == ControlMode.Path:
             self.path_follower.run()
@@ -136,14 +135,6 @@ class KinematicController:
         self.maxWheelSpeed = 6000
         self.safetyFactor = 0.8
 
-        # Debugging variables
-        # self.data = [] # [ref, devL, devR, speedL, speedR, deltaSpeed, deltaYMCalc]
-        # self.apPrevT = 0
-        # self.ap = False
-        # self.stop = False
-        # self.start = True
-        # self.debug = False
-
     ## Set movement setpoint.
     #
     # @param v forward speed
@@ -220,16 +211,26 @@ class KinematicController:
 class PathFollower:
     def __init__(self, kinematic_controller: KinematicController):
         self.s = 0
-        self.ps = [200, 200, 0]
-        self.pz = [0,0,0]
+        self.ps = [0, 0, 0]
+        self.pz = [200,200,0]
         self.kin_ctr = kinematic_controller
 
+        # Time parameters for measurement
+        self.prevT = 0
+
     def run(self):
-        T = 10
-        if self.s < 10:
-            self.kin_ctr.set_vw(self.v(self.s, self.ps, self.pz, T), self.w(self.s, self.ps, self.pz, T))
-            self.s += 0.1
-            uart_int.write(f"s: {self.s}, v: {self.v(self.s, self.ps, self.pz, T)}, w: {self.w(self.s, self.ps, self.pz, T)}\n")
+        if self.s < 1:
+            if self.prevT == 0:
+                self.prevT = time.ticks_us()
+            else:
+                dT = time.ticks_diff(time.ticks_us(), self.prevT) / 1e6  # delta time in seconds
+                dx = dT * self.v(self.s, self.ps, self.pz)
+                ds = self.get_delta_s(dx, self.s, self.ps, self.pz)
+                self.s += ds
+                uart_int.write(f"s: {self.s}, dds_x2(s): {self.dds_x2(self.s, self.ps, self.pz)}, delta s: {ds}, delta x: {dx}\n")
+
+            self.kin_ctr.set_vw(self.v(self.s, self.ps, self.pz), self.w(self.s, self.ps, self.pz))
+            uart_int.write(f"s: {self.s}, v: {self.v(self.s, self.ps, self.pz)}, w: {self.w(self.s, self.ps, self.pz)}\n")
         else:
             self.kin_ctr.set_vw(0,0)
         self.kin_ctr.run()
@@ -249,6 +250,7 @@ class PathFollower:
         b = 3*pz[1] - 3*ps[1] -2*ps[2] - pz[2]
         c = ps[2]
         d = ps[1]
+
         return a*s**3 + b*s**2 + c*s + d
 
     def dds_x2(self, s, ps, pz):
@@ -264,11 +266,14 @@ class PathFollower:
 
         return 3*a*s + 2*b
 
-    def v(self, s, ps, pz, T):
-        return math.sqrt(self.dds_x1(s, ps, pz)**2 + self.dds_x2(s, ps, pz)**2)/T
+    def v(self, s, ps, pz):
+        return 50 * math.copysign(1, (pz[1]-ps[1]))
 
-    def w(self, s, ps, pz, T):
-        return 1/T*(self.dds_x1(s, ps, pz)*self.dds2_x2(s, ps, pz))/((self.dds_x1(s, ps, pz))**2 + (self.dds_x2(s, ps, pz))**2)
+    def w(self, s, ps, pz):
+        return (self.dds_x1(s, ps, pz)*self.dds2_x2(s, ps, pz) - self.dds2_x1(s, ps, pz)*self.dds_x2(s, ps, pz))/((self.dds_x1(s, ps, pz))**2 + (self.dds_x2(s, ps, pz))**2)
+
+    def get_delta_s(self, delta_x, s, ps, pz):
+        return math.sqrt(delta_x**2 - (self.dds_x2(s, ps, pz))**2)
 
 ## Controller implementing a position control algorithm.
 class PositionController:

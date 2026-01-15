@@ -24,10 +24,11 @@ DEG_TO_RAD = pi / 180.0
 # The pose consists of a position in x-y-coordinates in mm and
 # an orientation angle phi from x to y axis in degrees.
 class Pose:
-    def __init__(self, x=0.0, y=0.0, phi=0.0):
+    def __init__(self, x=0.0, y=0.0, phi=0.0, dist=0.0):
         self.x = x
         self.y = y
         self.phi = phi
+        self.dist = dist
 
 
 ## Base class for pose estimators.
@@ -43,6 +44,7 @@ class PoseFilter:
         self.pose.x = 0.0
         self.pose.y = 0.0
         self.pose.phi = 0.0
+        self.pose.dist = 0.0
 
 
 ## Pose estimator using the wheel encoders.
@@ -79,6 +81,7 @@ class EncoderPoseFilter(PoseFilter):
         self.pose.y += (sin(phi_rad) + sin(phi_rad + dphi_rad)) * ds / 2.0
         self.pose.phi += dphi
 
+        
         return ds
 
 
@@ -185,6 +188,7 @@ class Navigation:
     # Should be periodically called in the main state machine.
     def update(self):
         self.pose_filter.update()
+        self.update_pose_distance()
         # including flag for corners 
         if not self.corner_correction_enabled:
         # im Setup: weder Corner noch Parklücken-Scan
@@ -203,7 +207,6 @@ class Navigation:
         #   resets the has_flag variabled
         if self.per.get_corner() == False and self.has_flag == True:
             # set phi to target-angle when corner is over
-            self.set_angle_at_corner = False
             if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
                 self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
                 #self.uart.write(f"Winkel wird nicht gesetzt")
@@ -211,7 +214,7 @@ class Navigation:
                 self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
                 #self.uart.write(f"Winkel gesetzt")
             self.has_flag = False
-
+        
         if self.axis_lock_enabled == True:
 
             #  when x coordninate does not change 
@@ -219,11 +222,11 @@ class Navigation:
                 #lock x coordinate 
                 self.set_pose_no_sync(self.closest_line.x_start, self.pose.y, self.pose.phi)
             # when y coordninate does not change 
-            elif self.closest_line.y_end == self.closest_line.y_start:
+            if self.closest_line.y_end == self.closest_line.y_start:
                 # lock y coordniate
                 self.set_pose_no_sync(self.pose.x, self.closest_line.y_start, self.pose.phi)
-            else:
-                self.set_pose_no_sync(self.pose.x, self.pose.y, self.pose.phi)
+           # else:
+               # self.set_pose_no_sync(self.pose.x, self.pose.y, self.pose.phi)
  
             
         self.scan_parking_spots()   
@@ -243,7 +246,13 @@ class Navigation:
                 closest_point = element
                 closest_idx = idx
         return closest_point, closest_idx
-
+    
+    def update_pose_distance(self):
+        d = self.per.get_distance()
+        if d is None:
+            return
+        if 0 <= d <= 2000:
+            self.pose.dist = d
 
     # set_pose to a fixed vatue (Eckenflag)
     def set_pose(self, x:float, y:float, phi:float):
@@ -285,7 +294,7 @@ class Navigation:
         return(ps.x1, ps.y1, ps.x2, ps.y2, ps.suitable_for_parking)
     
     def print_pose(self, pose: Pose):
-        return(pose.x, pose.y, pose.phi)
+        return(pose.x, pose.y, pose.phi, pose.dist)
 
     ## Reset the module to assert the robot is located in the starting pose.
     def reset(self):

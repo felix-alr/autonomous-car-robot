@@ -238,7 +238,7 @@ class Perception:
     def update(self):
         self.wheel_speed_filter.update()
         self.get_corner()
-        #self.test_corner_detection()
+        #self.test_gyro_loop()
     
 
     def get_wheel_speed_left(self):
@@ -292,15 +292,17 @@ class Perception:
           #  return self.line_pass
 
 
-        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER:
+        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz)>180):#gyroskop acceleration
+            self.line_pass = False
+            self.mag_pass = False
 
             #sensor auslesen
             l1, l2, l3, l4, l5 = self.line_sensor.line_sensors.read_calibrated()
 
              # Linie prüfen
-            if (l1 > 10 or l2 > 10) or (l4 > 10 or l5 > 10):#hier wurde der Liniensensor hinzugefügt
+            if (l1 > 20 or l2 > 20) or (l4 > 20 or l5 > 20):#hier wurde der Liniensensor hinzugefügt limit von 10 auf 50 erhöht
                 self.line_pass = True
-                self.uart.write("Linie passiert\n")
+                #self.uart.write("Linie passiert\n")
             
             self.imu.mag.read()
             mx, my, mz = self.imu.mag.last_reading_gauss
@@ -315,24 +317,25 @@ class Perception:
             if self.last_mx is not None and self.last_my is not None:
                 dx = abs(mx - self.last_mx)
                 dy = abs(my - self.last_my)
-                if dx >= 0.3 or dy >= 0.3:
-                    corner_detected = True
-                    self.uart.write(">>> ECKE ERKANNT <<<\n")
+                if dx >= 0.10 or dy >= 0.10: 
+                    self.mag_pass = True
+                    #self.uart.write(">>> ECKE ERKANNT <<<\n")
 
-            # --- Alte Werte aktualisieren ---
+                # --- Alte Werte aktualisieren ---
             self.last_mx = mx
             self.last_my = my
 
             
 
-            #if (self.line_pass) and mag_pass == True:
-            self.uart.write("Jetzt  ")
-            self._corner_detected = True
+            if self.line_pass and self.mag_pass == True:
+                #self.uart.write("Jetzt  ")
+                self._corner_detected = True
 
-        elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER:
-            self.uart.write("Nicht mehr\n")
+        elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER and (abs(gz)<100):# gyroskop acceleration
+            #self.uart.write("Nicht mehr\n")
             self._corner_detected = False
-            self.line_pass = False
+            #self.line_pass = False
+            #self.mag_pass = False
             #self._integrated_z_angle = 0.0
           
         # self._integrated_z_angle =0.0
@@ -369,9 +372,9 @@ class Perception:
 
                 gx, gy, gz = self.imu.gyro.last_reading_dps
 
-                print("Gyro (dps) | X: {:7.2f}   Y: {:7.2f}   Z: {:7.2f}".format(
-                    gx, gy, gz
-                ))
+                #self.uart.write("Gyro (dps) | X: {:7.2f}   Y: {:7.2f}   Z: {:7.2f}".format(
+                 #   gx, gy, gz
+                #))
 
                 time.sleep_ms(50)
 

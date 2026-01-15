@@ -75,6 +75,22 @@
             android:layout_weight="1"
             android:text="Phi: -" />
 
+        <!-- Anzeige der Dst des Roboters -->
+        <TextView
+            android:id="@+id/textViewDst"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Dst: -" />
+
+        <!-- Anzeige der Ecke des Roboters -->
+        <TextView
+            android:id="@+id/textViewEcke"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Ecke: -" />
+
     </LinearLayout>
 
     <LinearLayout
@@ -128,14 +144,7 @@
                 android:radius="1dp"
                 android:text="SETUP" />
 
-            <!-- Disconnect-Button -->
-            <Button
-                android:id="@+id/buttonDisconnect"
-                android:layout_width="128dp"
-                android:layout_height="64dp"
-                android:backgroundTint="@color/blue"
-                android:radius="1dp"
-                android:text="Disconnect" />
+            <!-- Disconnect-Button
 
             <TextView
                 android:id="@+id/textViewText"
@@ -143,7 +152,7 @@
                 android:layout_height="160dp"
                 android:text="Text:" >
 
-            </TextView>
+            </TextView> -->
         </LinearLayout>
 
         <LinearLayout
@@ -161,12 +170,6 @@
                 android:id="@+id/mapView"
                 android:layout_width="930dp"
                 android:layout_height="620dp"/>
-            <!--
-            <Button
-                android:id="@+id/parkSlotButton1"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:text="P" /> -->
 
         </RelativeLayout>
     </LinearLayout>

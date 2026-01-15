@@ -93,34 +93,6 @@ public class MapView extends View {
                         ? parkingPaintSuitable
                         : parkingPaintNotSuitable;
 
-                //float scaleX = 1.1167f;
-                //float scaleY = 1.09167f;
-                //Koordinaten übernehmen
-                //float xStart =  parkingSpot.x1;
-                //float yStart = parkingSpot.y1;
-                //float xEnd   = parkingSpot.x2;
-                //float yEnd   = parkingSpot.y2;
-
-                //if (yStart == yEnd){// Horizontale Parklücke Nach Unten
-                //    xStart = offsetX+xStart*scaleX;
-                //    yStart = offsetY-yStart*scaleY;
-                //    xEnd   = offsetX+xEnd*scaleX;
-                //    yEnd   = offsetY-(yEnd-125)*scaleY;
-                //    canvas.drawRect(xStart, yStart, xEnd, yEnd, fillPaint);
-                //} else if (xStart == xEnd && yStart < yEnd) { // Vertikale Parklücke Nach Rechts
-                //    xStart = offsetX+xStart*scaleX;
-                //    yStart = offsetY-parkingSpot.y2*scaleY;
-                //    xEnd   = offsetX+(xEnd+125)*scaleX;
-                //    yEnd   = offsetY-parkingSpot.y1*scaleY;
-                //    canvas.drawRect(xStart, yStart, xEnd, yEnd, fillPaint);
-                //} else if (xStart == xEnd && yStart> yEnd) { // Vertikale Parklücke Nach Links
-                //    xStart = offsetX+(xStart-125)*scaleX;
-                //    yStart = offsetY-yStart*scaleY;
-                //    xEnd   = offsetX+xEnd*scaleX;
-                //    yEnd   = offsetY-yEnd*scaleY;
-                //    canvas.drawRect(xStart, yStart, xEnd, yEnd, fillPaint);
-                //}
-
                 // Fläche
                 //canvas.drawRect(left, top, right, bottom, fillPaint);
                 canvas.drawRect(parkingSpot.x1, parkingSpot.y1, parkingSpot.x2, parkingSpot.y2, fillPaint);

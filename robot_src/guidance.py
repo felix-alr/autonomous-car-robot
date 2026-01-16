@@ -33,6 +33,7 @@ class GuidanceSetupState:
     RIGHT2 = 3
     DONE = 4
 
+## Enum for the states of the parking submachine.
 class GuidanceParkingState:
     APPROACH = "approach"
     ALIGN = "align"

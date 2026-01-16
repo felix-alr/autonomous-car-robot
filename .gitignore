@@ -9,4 +9,5 @@
 *.idea/*
 robot_docs/output/
 pyproject.toml
-.python-version
+.python-version#
+.DS_Store

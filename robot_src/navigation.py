@@ -196,16 +196,17 @@ class Navigation:
         
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
             self.has_flag = True
-            #self.uart.write(f"{self.pose.x}, {self.pose.y}, {self.pose.phi}")
+            #self.uart.write("Ecke erkannt")
             # finding closest point to current position
             self.closest_point, self.idx = self.find_closest_point()
             # find closest line from closest point
             self.closest_line = self.parcours[self.idx]
             # set x,y to closest corner
             self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
-            self.uart.write(f"{self.idx}")
+            #self.uart.write(f"{self.idx}")
         #   resets the has_flag variabled
         if self.per.get_corner() == False and self.has_flag == True:
+            #self.uart.write("Ecke vorbei")
             # set phi to target-angle when corner is over
             if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
                 self.set_pose(self.pose.x, self.pose.y, self.pose.phi)

@@ -236,7 +236,7 @@ public class MainActivity extends AppCompatActivity
                         String posY = reader.readLine();
                         String phi = reader.readLine();
                         String dst = reader.readLine();
-                        String ecke = reader.readLine();
+                        //String ecke = reader.readLine();
 
                         // UI mit neuer Position aktualisieren
                         runOnUiThread(() -> {
@@ -244,7 +244,7 @@ public class MainActivity extends AppCompatActivity
                             textViewPosY.setText("Y: " + posY);
                             textViewPhi.setText("Phi: " + phi);
                             textViewDst.setText("Dst: " + dst);
-                            textViewEcke.setText("Ecke: " + ecke);
+                            //textViewEcke.setText("Ecke: " + ecke);
 
                             // position updaten
                             float x = Float.parseFloat(posX);

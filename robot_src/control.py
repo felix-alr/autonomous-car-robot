@@ -60,7 +60,7 @@ class ModeController:
             self._motors.off()
 
         elif self._mode == ControlMode.Kinematic:
-            pts = [[0,0,0], [100,100,0]]
+            pts = [[0,0,0], [200,200,0]]
             if not self.initialized:
                 self.path_follower.set_points(pts[0] if self.park else pts[1], pts[1] if self.park else pts[0])
 
@@ -235,19 +235,24 @@ class PathFollower:
         self.s = 0.0
 
         self.v_min = 30.0           # mm/s
-        self.v_target = 50.0        # mm/s
+        self.v_target = 100.0        # mm/s
         self.v_current = self.v_min # mm/s
         self.direction = 1
 
-        self.accel_limit = 100.0    # mm/s^2
+        self.accel_limit = 50.0    # mm/s^2
 
         # Distance at which we start braking (v^2 / (2*a))
         self.brake_dist = ((self.v_target - self.v_min) ** 2) / (2 * self.accel_limit) # mm
+
 
         self.kin_ctr = kinematic_controller
         self.nav = navigation
         self.prev_t = 0
         self.end_reached = False
+
+        # Bezier curve default initialization
+        self.phi_end = 0
+        self.set_points([0,0,0], [200,200,0])
 
     def run(self):
         if self.s < 1.0 and not self.end_reached:
@@ -274,13 +279,17 @@ class PathFollower:
 
             # Compute Step
             # yields omega and ds
-            self.s, omega = self.compute_step(self.s, self.nav.get_pose(), self.v_current)
+            ds, omega = self.compute_step(self.s, dt, self.v_current)
+            if ds > 0.05:
+                ds = 0.05
+            self.s += ds
 
             # Termination Check
             # stop if close to end of the path
             if self.s >= 0.999 or dist_remaining < 2.0:
-                if self.compute_angle_adjustment_step():
-                    self.reset()
+                self.s = 1.0
+                self.v_current = 0
+                self.end_reached = True
 
             self.kin_ctr.set_vw(self.v_current * self.direction, omega)
         else:
@@ -292,7 +301,7 @@ class PathFollower:
 
     def set_points(self, p_start, p_end):
         phi_start = p_start[2]
-        phi_end = p_end[2]
+        self.phi_end = p_end[2]
         horizontal = math.cos(phi_start) > 1/math.sqrt(2) or math.cos(phi_start) < -1/math.sqrt(2)
         delta = (p_end[0] - p_start[0]) if horizontal else (p_end[1] - p_start[1])
         if delta < 0:
@@ -300,8 +309,8 @@ class PathFollower:
         else:
             self.direction = 1
         self.p0 = [p_start[0], p_start[1]]
-        self.p1 = [p_start[0] + delta/4*math.cos(phi_start), p_start[1] + delta/4*math.sin(phi_start)]
-        self.p2 = [p_end[0] - delta/4*math.cos(phi_end), p_end[1] - delta/4*math.sin(phi_end)]
+        self.p1 = [p_start[0] + delta/3*math.cos(phi_start), p_start[1] + delta/3*math.sin(phi_start)]
+        self.p2 = [p_end[0] - delta/3*math.cos(self.phi_end), p_end[1] - delta/3*math.sin(self.phi_end)]
         self.p3 = [p_end[0], p_end[1]]
 
     def reset(self):
@@ -312,7 +321,7 @@ class PathFollower:
         self.end_reached = False
 
     def set_velocity(self, v):
-        self.v = v
+        self.v_target = v
 
     def get_velocity(self):
         return self.v
@@ -355,7 +364,7 @@ class PathFollower:
 
         return dx, dy, ddx, ddy
 
-    def compute_step(self, s, pose: Pose, v_now):
+    def compute_step(self, s, dt, v_now):
         dx, dy, ddx, ddy = self.get_derivatives(s)
 
         speed_s_sq = dx ** 2 + dy ** 2
@@ -369,35 +378,18 @@ class PathFollower:
         kappa = (dx * ddy - dy * ddx) / (speed_s_sq * speed_s)
 
         omega = v_now * kappa
-        s_new = self.get_s_from_x(pose.x)
+        ds = (self.v_current * dt) / speed_s
 
-        return s_new, omega
+        return ds, omega
 
     def compute_angle_adjustment_step(self):
-
-        return False
-
-    def get_s_from_x(self, x_actual):
-        # 1. Start with a linear guess to get close
-        # s = (x - start) / (end - start)
-        x_range = self.p3[0] - self.p0[0]
-        if abs(x_range) < 0.1: return self.s  # Avoid div by zero if vertical
-
-        s_guess = (x_actual - self.p0[0]) / x_range
-        s_guess = max(0.0, min(1.0, s_guess))
-
-        # 2. Refine the guess using Newton's Method (3 iterations is plenty)
-        # This is essentially: s_next = s - (x(s) - x_target) / x'(s)
-        for _ in range(3):
-            curr_x, _ = self.get_position(s_guess)
-            dx, _, _, _ = self.get_derivatives(s_guess)
-
-            if abs(dx) < 1e-3: break  # Slope is too flat
-
-            s_guess = s_guess - (curr_x - x_actual) / dx
-            s_guess = max(0.0, min(1.0, s_guess))  # Keep within curve bounds
-
-        return s_guess
+        error = self.nav.get_pose().phi - self.phi_end
+        gain = 2.0 # Gain for calculating omega from error
+        if abs(error) < 0.025:
+            return False
+        omega = max(min(error * gain, 1.5), -1.5)
+        self.kin_ctr.set_vw(0, omega)
+        return True
 
     def compute_dt(self):
         now = time.ticks_us()
@@ -409,13 +401,6 @@ class PathFollower:
         self.prev_t = now
 
         return dt
-
-    def get_path_angle(self, s):
-        dx, dy, ddx, ddy = self.get_derivatives(s)
-        return math.atan(dy/dx)
-
-    def get_robot_angle(self):
-        return self.nav.get_pose().phi
 
 
 ## Controller implementing a position control algorithm.

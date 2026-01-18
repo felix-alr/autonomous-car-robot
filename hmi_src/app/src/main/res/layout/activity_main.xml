@@ -13,6 +13,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
+    android:background="?attr/colorPrimary"
     android:orientation="vertical">
 
     <!-- Layout nimmt die gesamte Bildschirmbreite
@@ -82,14 +83,6 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Dst: -" />
-
-        <!-- Anzeige der Ecke des Roboters -->
-        <TextView
-            android:id="@+id/textViewEcke"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Ecke: -" />
 
     </LinearLayout>
 

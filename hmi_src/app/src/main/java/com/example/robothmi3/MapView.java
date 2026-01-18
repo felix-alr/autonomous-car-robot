@@ -24,6 +24,7 @@ public class MapView extends View {
 
     private Paint parkingPaintSuitable;
     private Paint parkingPaintNotSuitable;
+    private Paint distanceLineColor;
     private Bitmap mapBitmap;
     private Bitmap robotBitmap;
 
@@ -31,6 +32,9 @@ public class MapView extends View {
     private float robotX = 0;
     private float robotY = 0;
     private float robotPhi = 0;
+
+    private float robotDx = 0;
+    private float robotDy = 0;
 
     public float offsetX = 250;
     public float offsetY = 775;
@@ -64,6 +68,11 @@ public class MapView extends View {
         pathPaint.setColor(Color.RED);
         pathPaint.setStrokeWidth(5f);
         pathPaint.setStyle(Paint.Style.STROKE);
+
+        distanceLineColor = new Paint();
+        distanceLineColor.setColor(Color.BLUE);
+        distanceLineColor.setStrokeWidth(5f);
+        distanceLineColor.setStyle(Paint.Style.STROKE);
 
     }
 
@@ -110,6 +119,7 @@ public class MapView extends View {
         canvas.translate(robotX, robotY);
         canvas.rotate(-robotPhi);
         canvas.scale(0.2f, 0.2f);
+        canvas.drawLine(robotX, robotY, robotDx, robotDy, distanceLineColor);
 
 
         // Mittelpunkt des Roboters richtig setzen
@@ -141,6 +151,9 @@ public class MapView extends View {
     private ParkingSpot checkParkingSpot(float x, float y) {
         for (ParkingSpot parkingSpot: parkingSpots){
             if (isBetween(x, parkingSpot.x1, parkingSpot.x2) && isBetween(y, parkingSpot.y1, parkingSpot.y2)) {
+                if (parkingSpot.suitable != 1) {
+                    return null;
+                }
                 return parkingSpot;
             }
         }
@@ -159,14 +172,18 @@ public class MapView extends View {
     /**
      * Wird von der MainActivity aufgerufen, wenn neue Positionen eintreffen.
      */
-    public void updateRobotPose(float x, float y, float phi) {
+    public void updateRobotPose(float x, float y, float phi, float dx, float dy) {
         x += offsetX;
         y += offsetY;
         phi += offsetPhi;
+        dx += offsetX;
+        y += offsetY;
 
         robotX = x;
         robotY = y;
         robotPhi = phi;
+        robotDx = dx;
+        robotDy = dy;
 
         // Pfadpunkt hinzufügen
         pathPoints.add(new PointF(x, y));

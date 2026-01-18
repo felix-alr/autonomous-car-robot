@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity
         textViewModus = findViewById(R.id.textViewModus);
         //textViewText = findViewById(R.id.textViewText);
         textViewDst = findViewById(R.id.textViewDst);
-        textViewEcke = findViewById(R.id.textViewEcke);
+        //textViewEcke = findViewById(R.id.textViewEcke);
 
         buttonIdle = findViewById(R.id.buttonIdle); // Roboter Ruht
         buttonScout = findViewById(R.id.buttonScout); //Pfad Erkunden
@@ -250,16 +250,34 @@ public class MainActivity extends AppCompatActivity
                             float x = Float.parseFloat(posX);
                             float y = Float.parseFloat(posY);
                             float p = Float.parseFloat(phi);
-                            //float d = Float.parseFloat(dst);
+                            float d = Float.parseFloat(dst);
                             y = -y; // Koordinatensystem umdrehen
+                            float dx = 0;
+                            float dy = 0;
+
+                            if (p <= 45.0f && p > 315.0f){
+                                dx = x;
+                                dy = d + y;
+                            } else if (p <= 135.0f && p > 45.0f) {
+                                dx = d + x;
+                                dy = y;
+                            } else if (p <= 225.0f && p > 135.0f) {
+                                dx = x;
+                                dy = y - d;
+                            } else if (p <= 315.0f && p > 225) {
+                                dx = x - d;
+                                dy = y;
+                            }
 
                             //Umrechnung cm -> pixel/dp
                             float scaleX = 1.1167f; // umrechnung vgl Karte
                             float scaleY = 1.109167f; // umrechnung vgl Karte
                             x = x*scaleX;
                             y = y*scaleY;
+                            dx = dx*scaleX;
+                            dy = dy*scaleY;
 
-                            mapView.updateRobotPose(x, y, p);
+                            mapView.updateRobotPose(x, y, p, dx, dy);
                         });
 
                     } catch (IOException e) {
@@ -437,6 +455,10 @@ public class MainActivity extends AppCompatActivity
         sendCommand("3 "+ ID+"\r");
         textViewModus.setText("Einparken: " + ID);
         System.out.println("sendSpotId");
+    }
+
+    public void reset(){
+
     }
 
 }

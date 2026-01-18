@@ -13,6 +13,8 @@ import math
 
 from machine import Pin, UART
 
+from navigation import Pose
+
 
 ## Enum for modes of the ModeController, that is the different specific control algorithms.
 class ControlMode:
@@ -39,8 +41,12 @@ class ModeController:
 
         self.line_follower = LineFollower(self._motors, perception)
         self.kinematic_controller = KinematicController(self._motors, self._perception)
-        self.path_follower = PathFollower(self.kinematic_controller)
+        self.path_follower = PathFollower(self.kinematic_controller, self._navigation)
         self.position_controller = PositionController()
+
+
+        self.park = True
+        self.initialized = False
 
     ## Select a specific control algorithm.
     #
@@ -54,7 +60,15 @@ class ModeController:
             self._motors.off()
 
         elif self._mode == ControlMode.Kinematic:
-            self.path_follower.run()   # CHANGE BACK TO KINEMATIC CONTROLLER --------------------------------------- !!!
+            pts = [[0,0,0], [100,100,0]]
+            if not self.initialized:
+                self.path_follower.set_points(pts[0] if self.park else pts[1], pts[1] if self.park else pts[0])
+
+            if self.path_follower.run():   # CHANGE BACK TO KINEMATIC CONTROLLER --------------------------------------- !!!
+                self.path_follower.reset()
+                self.park = not self.park
+                self.path_follower.set_points(pts[0] if self.park else pts[1], pts[1] if self.park else pts[0])
+
 
         elif self._mode == ControlMode.Line:
             self.line_follower.run()
@@ -217,71 +231,192 @@ class KinematicController:
 
 ## Controller to follow a polynomial path between a start and target pose.
 class PathFollower:
-    def __init__(self, kinematic_controller: KinematicController):
-        self.s = 0
-        self.ps = [0, 0, 0]
-        self.pz = [500,500,0]
-        self.kin_ctr = kinematic_controller
+    def __init__(self, kinematic_controller: KinematicController, navigation: Navigation):
+        self.s = 0.0
 
-        # Time parameters for measurement
-        self.prevT = 0
+        self.v_min = 30.0           # mm/s
+        self.v_target = 50.0        # mm/s
+        self.v_current = self.v_min # mm/s
+        self.direction = 1
+
+        self.accel_limit = 100.0    # mm/s^2
+
+        # Distance at which we start braking (v^2 / (2*a))
+        self.brake_dist = ((self.v_target - self.v_min) ** 2) / (2 * self.accel_limit) # mm
+
+        self.kin_ctr = kinematic_controller
+        self.nav = navigation
+        self.prev_t = 0
+        self.end_reached = False
 
     def run(self):
-        if self.s < 1:
-            if self.prevT == 0:
-                self.prevT = time.ticks_us()
-            else:
-                dT = time.ticks_diff(time.ticks_us(), self.prevT) / 1e6  # delta time in seconds
-                dx = dT * self.v(self.s, self.ps, self.pz)
-                ds = self.get_delta_s(dx, self.s, self.ps, self.pz)
-                self.s += ds
-                uart_int.write(f"s: {self.s}, dds_x2(s): {self.dds_x2(self.s, self.ps, self.pz)}, delta s: {ds}, delta x: {dx}\n")
+        if self.s < 1.0 and not self.end_reached:
 
-            self.kin_ctr.set_vw(self.v(self.s, self.ps, self.pz), self.w(self.s, self.ps, self.pz))
-            uart_int.write(f"s: {self.s}, v: {self.v(self.s, self.ps, self.pz)}, w: {self.w(self.s, self.ps, self.pz)}\n")
+            # Computing Delta Time
+            dt = self.compute_dt()
+
+            # Calculate Distance Remaining
+            # approximated by the distance from the robot to P3
+            curr_x, curr_y = self.get_position(self.s)
+            dist_remaining = math.sqrt((self.p3[0] - curr_x) ** 2 + (self.p3[1] - curr_y) ** 2)
+
+            # Velocity Ease-In & Ease-Out
+            # Target velocity based on stopping distance
+            v_limit = math.sqrt(2 * self.accel_limit * dist_remaining)
+            v_req = min(self.v_target, v_limit)
+            v_req = max(v_req, self.v_min)  # Don't stall before the end
+
+            # Smooth velocity adjustment
+            if self.v_current < v_req:
+                self.v_current = min(v_req, self.v_current + self.accel_limit * dt)
+            elif self.v_current > v_req:
+                self.v_current = max(v_req, self.v_current - self.accel_limit * dt)
+
+            # Compute Step
+            # yields omega and ds
+            self.s, omega = self.compute_step(self.s, self.nav.get_pose(), self.v_current)
+
+            # Termination Check
+            # stop if close to end of the path
+            if self.s >= 0.999 or dist_remaining < 2.0:
+                if self.compute_angle_adjustment_step():
+                    self.reset()
+
+            self.kin_ctr.set_vw(self.v_current * self.direction, omega)
         else:
-            self.kin_ctr.set_vw(0,0)
+            self.kin_ctr.set_vw(0, 0)
+            self.end_reached = True
+
         self.kin_ctr.run()
+        return self.end_reached
 
+    def set_points(self, p_start, p_end):
+        phi_start = p_start[2]
+        phi_end = p_end[2]
+        horizontal = math.cos(phi_start) > 1/math.sqrt(2) or math.cos(phi_start) < -1/math.sqrt(2)
+        delta = (p_end[0] - p_start[0]) if horizontal else (p_end[1] - p_start[1])
+        if delta < 0:
+            self.direction = -1
+        else:
+            self.direction = 1
+        self.p0 = [p_start[0], p_start[1]]
+        self.p1 = [p_start[0] + delta/4*math.cos(phi_start), p_start[1] + delta/4*math.sin(phi_start)]
+        self.p2 = [p_end[0] - delta/4*math.cos(phi_end), p_end[1] - delta/4*math.sin(phi_end)]
+        self.p3 = [p_end[0], p_end[1]]
 
-    def x1(self, s, ps, pz):
-        return s*(pz[0] - ps[0]) + ps[0]
+    def reset(self):
+        self.s = 0
+        self.direction = 0
+        self.prev_t = 0
+        self.v_current = 0
+        self.end_reached = False
 
-    def dds_x1(self, s, ps, pz):
-        return pz[0] - ps[0]
+    def set_velocity(self, v):
+        self.v = v
 
-    def dds2_x1(self, s, ps, pz):
-        return 0
+    def get_velocity(self):
+        return self.v
 
-    def x2(self, s, ps, pz):
-        a = pz[2] + ps[2] + 2*ps[1] - 2* pz[1]
-        b = 3*pz[1] - 3*ps[1] -2*ps[2] - pz[2]
-        c = ps[2]
-        d = ps[1]
+    def get_position(self, s):
+        om_s = 1.0 - s
+        x = (om_s ** 3 * self.p0[0] +
+             3 * om_s ** 2 * s * self.p1[0] +
+             3 * om_s * s ** 2 * self.p2[0] +
+             s ** 3 * self.p3[0])
+        y = (om_s ** 3 * self.p0[1] +
+             3 * om_s ** 2 * s * self.p1[1] +
+             3 * om_s * s ** 2 * self.p2[1] +
+             s ** 3 * self.p3[1])
+        return x, y
 
-        return a*s**3 + b*s**2 + c*s + d
+    def get_derivatives(self, s):
+        s = max(0.0, min(1.0, s))
 
-    def dds_x2(self, s, ps, pz):
-        a = pz[2] + ps[2] + 2*ps[1] - 2* pz[1]
-        b = 3*pz[1] - 3*ps[1] -2*ps[2] - pz[2]
-        c = ps[2]
+        # Pre-calculate common terms for efficiency
+        om_s = 1.0 - s
 
-        return 3*a*s**2 + 2*b*s + c
+        # First Derivative
+        # B'(s) = 3(1-s)^2(P1-P0) + 6(1-s)s(P2-P1) + 3s^2(P3-P2)
+        dx = (3 * om_s ** 2 * (self.p1[0] - self.p0[0]) +
+              6 * om_s * s * (self.p2[0] - self.p1[0]) +
+              3 * s ** 2 * (self.p3[0] - self.p2[0]))
 
-    def dds2_x2(self, s, ps, pz):
-        a = pz[2] + ps[2] + 2*ps[1] - 2* pz[1]
-        b = 3*pz[1] - 3*ps[1] -2*ps[2] - pz[2]
+        dy = (3 * om_s ** 2 * (self.p1[1] - self.p0[1]) +
+              6 * om_s * s * (self.p2[1] - self.p1[1]) +
+              3 * s ** 2 * (self.p3[1] - self.p2[1]))
 
-        return 3*a*s + 2*b
+        # Second Derivative
+        # B''(s) = 6(1-s)(P2 - 2P1 + P0) + 6s(P3 - 2P2 + P1)
+        ddx = (6 * om_s * (self.p2[0] - 2 * self.p1[0] + self.p0[0]) +
+               6 * s * (self.p3[0] - 2 * self.p2[0] + self.p1[0]))
 
-    def v(self, s, ps, pz):
-        return 50 * math.copysign(1, (pz[1]-ps[1]))
+        ddy = (6 * om_s * (self.p2[1] - 2 * self.p1[1] + self.p0[1]) +
+               6 * s * (self.p3[1] - 2 * self.p2[1] + self.p1[1]))
 
-    def w(self, s, ps, pz):
-        return (self.dds_x1(s, ps, pz)*self.dds2_x2(s, ps, pz) - self.dds2_x1(s, ps, pz)*self.dds_x2(s, ps, pz))/((self.dds_x1(s, ps, pz))**2 + (self.dds_x2(s, ps, pz))**2)
+        return dx, dy, ddx, ddy
 
-    def get_delta_s(self, delta_x, s, ps, pz):
-        return delta_x / math.sqrt(1 + (self.dds_x2(s, ps, pz))**2)
+    def compute_step(self, s, pose: Pose, v_now):
+        dx, dy, ddx, ddy = self.get_derivatives(s)
+
+        speed_s_sq = dx ** 2 + dy ** 2
+        speed_s = math.sqrt(speed_s_sq)
+
+        # If handles are collapsed (dx/dy both 0), we set a small floor
+        # to prevent division by zero while maintaining s-progression.
+        if speed_s < 1e-6:
+            return 0.001, 0.0
+
+        kappa = (dx * ddy - dy * ddx) / (speed_s_sq * speed_s)
+
+        omega = v_now * kappa
+        s_new = self.get_s_from_x(pose.x)
+
+        return s_new, omega
+
+    def compute_angle_adjustment_step(self):
+
+        return False
+
+    def get_s_from_x(self, x_actual):
+        # 1. Start with a linear guess to get close
+        # s = (x - start) / (end - start)
+        x_range = self.p3[0] - self.p0[0]
+        if abs(x_range) < 0.1: return self.s  # Avoid div by zero if vertical
+
+        s_guess = (x_actual - self.p0[0]) / x_range
+        s_guess = max(0.0, min(1.0, s_guess))
+
+        # 2. Refine the guess using Newton's Method (3 iterations is plenty)
+        # This is essentially: s_next = s - (x(s) - x_target) / x'(s)
+        for _ in range(3):
+            curr_x, _ = self.get_position(s_guess)
+            dx, _, _, _ = self.get_derivatives(s_guess)
+
+            if abs(dx) < 1e-3: break  # Slope is too flat
+
+            s_guess = s_guess - (curr_x - x_actual) / dx
+            s_guess = max(0.0, min(1.0, s_guess))  # Keep within curve bounds
+
+        return s_guess
+
+    def compute_dt(self):
+        now = time.ticks_us()
+        if self.prev_t == 0:
+            self.prev_t = now
+            return -1
+
+        dt = time.ticks_diff(now, self.prev_t) / 1e6
+        self.prev_t = now
+
+        return dt
+
+    def get_path_angle(self, s):
+        dx, dy, ddx, ddy = self.get_derivatives(s)
+        return math.atan(dy/dx)
+
+    def get_robot_angle(self):
+        return self.nav.get_pose().phi
+
 
 ## Controller implementing a position control algorithm.
 class PositionController:

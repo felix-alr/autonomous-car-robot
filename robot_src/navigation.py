@@ -357,7 +357,7 @@ class Navigation:
 
                 new_orient, new_line = self.spot_orientation_and_line(spot)
 
-                to_delete = []
+                self.to_delete = []
 
                 for spot_id, old_spot in list(self.parking_spots.items()):
                     old_orient, old_line = self.spot_orientation_and_line(old_spot)
@@ -369,15 +369,15 @@ class Navigation:
                         if abs(new_line - old_line)> 1e-6:
                             continue
                         if self.intervals_overlap(spot.x1, spot.x2, old_spot.x1, old_spot.x2):
-                            to_delete.append(spot_id)
+                            self.to_delete.append(spot_id)
                     
                     else:
                         if abs(new_line - old_line)> 1e-6:
                             continue
                         if self.intervals_overlap(spot.y1, spot.y2, old_spot.y1, old_spot.y2):
-                            to_delete.append(spot_id)
+                            self.to_delete.append(spot_id)
                 
-                for spot_id in to_delete:
+                for spot_id in self.to_delete:
                     self.parking_spots.pop(spot_id, None)   #Johanna fragen ob das klar geht mit None
                 
                 new_id = (max(self.parking_spots.keys())+1) if self.parking_spots else self.parking_spots[new_id] = spot

@@ -228,11 +228,13 @@ class Perception:
         self._last_time_gyro = time.ticks_ms()
         self._integrated_z_angle = 0.0 #°
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
-        self._last_corner_time = 0      # Zeitmarke für den Cooldown
-        self._corner_cooldown = 1000   # Cooldown in ms
+        #self._last_corner_time = 0      # Zeitmarke für den Cooldown
+        #self._corner_cooldown = 1000   # Cooldown in ms
         self._corner_detected = False
         self.line_pass = False  
         self.mag_pass = False
+        self.last_mx = None
+        self.last_my = None
 
     ## Run all update routines of the perception module.
     def update(self):
@@ -285,15 +287,20 @@ class Perception:
 
         #self.uart.write(f"diff speed: {speed_diff}\n")
 
+<<<<<<< HEAD
         ROTATIONAL_THRESHOLD_UPPER = 15 # 25° Änderung zwischen zwei messungen erwwartet
         ROTATIONAL_THRESHOLD_LOWER = 1.5
+=======
+        ROTATIONAL_THRESHOLD_UPPER = 14 #  Änderung zwischen zwei messungen erwartet
+        ROTATIONAL_THRESHOLD_LOWER = 10
+>>>>>>> Perception
         #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
         #if (l1 > 10 or l2 > 10) or (l4 > 10 or l5 > 10):#hier soll er erkennen ob auf der linken oder rechten seite ein Sensor die Linie überfährt und falls, das passiert den wert line_pass auf True setzen
          #   self.line_pass = True
           #  return self.line_pass
 
 
-        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz)>180):#gyroskop acceleration
+        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz)>150):#gyroskop acceleration#geändert von 180
             self.line_pass = False
             self.mag_pass = False
 
@@ -309,18 +316,18 @@ class Perception:
             mx, my, mz = self.imu.mag.last_reading_gauss
            
            # Alte Werte initialisieren, falls noch nicht vorhanden
-            if not hasattr(self, "last_mx"):
-                self.last_mx = None
-            if not hasattr(self, "last_my"):
-                self.last_my = None
+            #if not hasattr(self, "last_mx"):
+             #   self.last_mx = None
+            #if not hasattr(self, "last_my"):
+             #   self.last_my = None
             
             #THRESHOLD_MAG = 0.2
             if self.last_mx is not None and self.last_my is not None:
                 dx = abs(mx - self.last_mx)
                 dy = abs(my - self.last_my)
-                if dx >= 0.10 or dy >= 0.10: 
+                if dx >= 0.05 or dy >= 0.05: 
                     self.mag_pass = True
-                    #self.uart.write(">>> ECKE ERKANNT <<<\n")
+                    #self.uart.write(">>> ECKE ERKANNT(mag) <<<\n")
 
                 # --- Alte Werte aktualisieren ---
             self.last_mx = mx
@@ -335,8 +342,8 @@ class Perception:
         elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER and (abs(gz)<100):# gyroskop acceleration
             #self.uart.write("Nicht mehr\n")
             self._corner_detected = False
-            #self.line_pass = False
-            #self.mag_pass = False
+            self.line_pass = False# wieder freigegeben
+            self.mag_pass = False
             #self._integrated_z_angle = 0.0
           
         # self._integrated_z_angle =0.0

@@ -119,12 +119,14 @@ public class MapView extends View {
             }
         }
 
+        canvas.drawLine(robotX, robotY, robotDx, robotDy, distanceLineColor);
+        //System.out.println("x1: "+robotX+" y1: "+robotY+" x2: "+robotDx+" y2: "+robotDy);
+
         // Roboter drehen + zeichnen
         canvas.save();
         canvas.translate(robotX, robotY);
         canvas.rotate(-robotPhi);
         canvas.scale(0.2f, 0.2f);
-        canvas.drawLine(robotX, robotY, robotDx, robotDy, distanceLineColor);
 
 
         // Mittelpunkt des Roboters richtig setzen
@@ -182,7 +184,7 @@ public class MapView extends View {
         y += offsetY;
         phi += offsetPhi;
         dx += offsetX;
-        y += offsetY;
+        dy += offsetY;
 
         robotX = x;
         robotY = y;

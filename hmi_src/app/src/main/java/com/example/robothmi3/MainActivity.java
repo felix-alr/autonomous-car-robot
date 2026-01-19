@@ -88,8 +88,8 @@ public class MainActivity extends AppCompatActivity
             sendCommand("y\n");
             textViewModus.setText("Modus: Scout");
             activeMode(buttonScout);
-            //ArrayList<ParkingSpot> spots = new ArrayList<ParkingSpot>();
-            //mapView.updateParkingSpots(spots);
+            ArrayList<ParkingSpot> spots = new ArrayList<>();
+            mapView.updateParkingSpots(spots);
         });
         //buttonParking.setOnClickListener(v -> anfrageParkingSpots());
         buttonParking.setOnClickListener(v -> {
@@ -103,6 +103,12 @@ public class MainActivity extends AppCompatActivity
             sendCommand("r\n");
             textViewModus.setText("Modus: SetUp");
             activeMode(buttonSetup);
+
+            handler.postDelayed(() -> {
+                sendCommand("z\n");
+                textViewModus.setText("Modus: Idle");
+                activeMode(buttonIdle);
+            }, 3_000); // 10 Sekunden
 
         });
 
@@ -263,19 +269,23 @@ public class MainActivity extends AppCompatActivity
                             float dx = 0;
                             float dy = 0;
 
-                            if (p <= 45.0f && p > 315.0f){
+                            if (p <= 45.0f && p > -45.0f){
                                 dx = x;
-                                dy = d + y;
+                                dy = d + y + 30;
                             } else if (p <= 135.0f && p > 45.0f) {
-                                dx = d + x;
+                                dx = d + x + 30;
                                 dy = y;
                             } else if (p <= 225.0f && p > 135.0f) {
                                 dx = x;
-                                dy = y - d;
+                                dy = y - d - 30;
                             } else if (p <= 315.0f && p > 225) {
-                                dx = x - d;
+                                dx = x - d - 30;
+                                dy = y;
+                            } else if (p <= -45.0f && p > -135.0f) {
+                                dx = x - d - 30;
                                 dy = y;
                             }
+
 
                             //Umrechnung cm -> pixel/dp
                             float scaleX = 1.1167f; // umrechnung vgl Karte

@@ -93,6 +93,7 @@ class GuidanceStateMachine:
 
         elif self.current_state == GuidanceState.SETUP:
             if self.current_state != self.last_state:
+                self.navigation.corner_correction_enabled = False   #Eckenerkennung muss deaktiviert bleiben
                 # entry action
                 self.current_setup_state = GuidanceSetupState.RIGHT1
                 self.last_setup_state = None
@@ -145,6 +146,7 @@ class GuidanceStateMachine:
 
         elif self.current_state == GuidanceState.SCOUT:
             if self.current_state != self.last_state:
+                self.navigation.corner_correction_enabled = True    #Eckenerkennung darf aktiviert werden
                 # entry action
                 self.control.set_mode(ControlMode.Line)
 

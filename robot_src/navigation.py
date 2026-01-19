@@ -144,6 +144,8 @@ class Navigation:
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key
         self.parking_spots: dict[int, ParkingSpot] = {}
+
+        self.to_delete = [] 
         
         # todo students: define parcours using Line segments!
         # self.parcours = [
@@ -203,7 +205,7 @@ class Navigation:
             self.closest_line = self.parcours[self.idx]
             # set x,y to closest corner
             self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
-            self.uart.write(f"{self.idx}")
+            #self.uart.write(f"{self.idx}")
         #   resets the has_flag variabled
         if self.per.get_corner() == False and self.has_flag == True:
             #self.uart.write("Ecke vorbei")
@@ -314,12 +316,15 @@ class Navigation:
 
     ## Scan for available parking spots on the side.
     def scan_parking_spots(self):
-        if self.per.get_distance() > 100 and self.has_parkingspot == False: #Trigger for start_pose  
+        self.d = self.per.get_distance() 
+        if self.d is None:
+            return
+        if self.d > 100 and self.has_parkingspot == False: #Trigger for start_pose  
             self.has_parkingspot = True
             sx, sy = self.shift_along_heading(self.pose, 16)
             self.pose_start = Pose(sx, sy, self.pose.phi) # safe start pose 
         
-        if self.per.get_distance() <= 100 and self.has_parkingspot == True: # Trigger for end_pose 
+        if self.d <= 100 and self.has_parkingspot == True: # Trigger for end_pose 
             self.has_parkingspot = False 
             sx, sy = self.shift_along_heading(self.pose, 16)
             self.pose_end = Pose(sx, sy, self.pose.phi)   # safe end pose 
@@ -357,7 +362,7 @@ class Navigation:
 
                 new_orient, new_line = self.spot_orientation_and_line(spot)
 
-                self.to_delete = []
+                self.to_delete.clear()
 
                 for spot_id, old_spot in list(self.parking_spots.items()):
                     old_orient, old_line = self.spot_orientation_and_line(old_spot)
@@ -380,7 +385,12 @@ class Navigation:
                 for spot_id in self.to_delete:
                     self.parking_spots.pop(spot_id, None)   #Johanna fragen ob das klar geht mit None
                 
-                new_id = (max(self.parking_spots.keys())+1) if self.parking_spots else self.parking_spots[new_id] = spot
+                if self.parking_spots:
+                    new_id = max(self.parking_spots.keys()) + 1
+                else:
+                    new_id = 1
+
+                self.parking_spots[new_id] = spot
         return 
 
 
@@ -404,20 +414,20 @@ class Navigation:
 
 
     def spot_orientation_and_line(self, spot):
-                """
-                orient: "x" Spot liegt entlang x (y ist fix)
-                        "y" Spot liegt entlang y (x ist fix)
-                line_value: bei "x" ist es y_fix (z.B. 200)
-                            bei "y" ist es x_fix (z.B. 900 oder -100)
-                """
-                dx = abs(spot.x2 - spot.x1)
-                dy = abs(spot.y2 - spot.y1)
-                if dx >= dy:
-                    return "x", spot.y1  # y1==y2==fix
-                else:
-                    return "y", spot.x1  # x1==x2==fix
+        """
+        orient: "x" Spot liegt entlang x (y ist fix)
+                "y" Spot liegt entlang y (x ist fix)
+        line_value: bei "x" ist es y_fix (z.B. 200)
+                    bei "y" ist es x_fix (z.B. 900 oder -100)
+        """
+        dx = abs(spot.x2 - spot.x1)
+        dy = abs(spot.y2 - spot.y1)
+        if dx >= dy:
+            return "x", spot.y1  # y1==y2==fix
+        else:
+            return "y", spot.x1  # x1==x2==fix
                 
     def intervals_overlap(self,u1, u2, v1, v2):
-            lo1, hi1 = sorted((u1, u2))
-            lo2, hi2 = sorted((v1, v2))
-            return (lo1 <= hi2) and (lo2 <= hi1)
+        lo1, hi1 = sorted((u1, u2))
+        lo2, hi2 = sorted((v1, v2))
+        return (lo1 <= hi2) and (lo2 <= hi1)

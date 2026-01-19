@@ -203,7 +203,7 @@ class Navigation:
             self.closest_line = self.parcours[self.idx]
             # set x,y to closest corner
             self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
-            self.uart.write(f"{self.idx}")
+            #self.uart.write(f"{self.idx}")
         #   resets the has_flag variabled
         if self.per.get_corner() == False and self.has_flag == True:
             #self.uart.write("Ecke vorbei")

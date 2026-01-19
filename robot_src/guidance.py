@@ -9,10 +9,13 @@ from utils import Display
 
 from pololu_3pi_2040_robot import motors
 from navigation import Pose
+from math import pi
 
 # For debugging -----------------
 from machine import Pin, UART
 uart = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
+
+
 
 SETUP_SPEED = 600
 
@@ -227,8 +230,7 @@ class GuidanceStateMachine:
                 self.display.text_line("anfahren", 1)
 
                 #exit action (nur beim Übergang in anderen Unterzustand)
-                pose = self.navigation.get_pose()
-                if abs(self.start_pose.x - pose.x) < 20 and abs(self.start_pose.y - pose.y) < 10:   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
+                if self.near(self.navigation.get_pose().x, self.start_pose.x, 10) and self.near(self.navigation.get_pose().y, self.start_pose.y, 10):   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 10 mm   
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
@@ -239,13 +241,13 @@ class GuidanceStateMachine:
                     # entry action
                     self.navigation.axis_lock_enabled = False
                     self.control.set_mode(ControlMode.Kinematic)
-                    self.control.kinematic_controller.set_vw(0, 1) # Wert verändern?
+                    self.control.kinematic_controller.set_vw(0, 0.3) # Wert verändern?
                 # nominal action
                 self.display.text_line("ausrichten", 1)
                 self.control.run()
 
                 #exit action
-                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 0.5):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 5 Grad
+                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 0.5):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 0,5 Grad
                     self.start_pose = self.navigation.get_pose() #Aktualisierung der Startpose mit aktueller Pose nach Ausrichten augrund der Toleranz der Startposition, für erhöhte Genauigkeit bei der Pfadfolge
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
@@ -255,15 +257,19 @@ class GuidanceStateMachine:
             if self.current_parking_state == GuidanceParkingState.PARK:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
-                    #Übergabe der Start- und Endpose an den PathFollower fehlt
+                    #Übergabe der Start- und Endpose an den PathFollower
+                    s = self.start_pose
+                    e = self.end_pose
+                    s_pose = [s.x, s.y, s.phi * pi / 180.0]
+                    e_pose = [e.x, e.y, e.phi * pi / 180.0]
+                    #self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
-                #evtl. noch Variable hinzufügen, die dem PathFollower signalisiert, dass es sich um  Einparken handelt (pathstart = self.start_pose)
                 self.display.text_line("einparken", 1)
                 self.control.run()
 
                 #exit action
-                if self.navigation.get_pose().x == self.end_pose.x and self.navigation.get_pose().y == self.end_pose.y: # evtl. fehlen Toleranzen
+                if self.near(self.navigation.get_pose().x, self.end_pose.x, 1) and self.near(self.navigation.get_pose().y, self.end_pose.y, 1):
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
@@ -279,14 +285,19 @@ class GuidanceStateMachine:
             if self.current_parking_state == GuidanceParkingState.LEAVE:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
-                    #Übergabe der Start- und Endpose an den PathFollower fehlt
+                    #Übergabe der Start- und Endpose an den PathFollower
+                    s = self.start_pose
+                    e = self.end_pose
+                    s_pose = [s.x, s.y, s.phi * pi / 180.0]
+                    e_pose = [e.x, e.y, e.phi * pi / 180.0]
+                    #self.control.path_follower.set_points(e_pose, s_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
                 #evtl. noch Variable hinzufügen, die dem PathFollower signalisiert, dass es sich um  Ausparken handelt (pathstart = self.end_pose)
                 self.control.run()
 
                 #exit action
-                if self.navigation.get_pose().x == self.start_pose.x and self.navigation.get_pose().y == self.start_pose.y:   #Prüfen, ob sich Roboter auf Startposition befindet (evtl. muss Toleranz eingebaut werden) 
+                if self.near(self.navigation.get_pose().x, self.start_pose.x, 10) and self.near(self.navigation.get_pose().y, self.start_pose.y, 10):   #Prüfen, ob sich Roboter auf Startposition befindet
                     self.request_state(GuidanceState.SCOUT)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()

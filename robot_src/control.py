@@ -1,6 +1,7 @@
 ## @package control
 #
 # Module containing the general modal controller and specific control algorithms
+import random
 
 from pololu_3pi_2040_robot.motors import Motors
 import time
@@ -46,7 +47,9 @@ class ModeController:
 
 
         self.park = True
+        self.last_park = True
         self.initialized = False
+        self.pts = [[0,0,0], [50,50,0]]
 
     ## Select a specific control algorithm.
     #
@@ -60,14 +63,16 @@ class ModeController:
             self._motors.off()
 
         elif self._mode == ControlMode.Kinematic:
-            pts = [[0,0,0], [200,200,0]]
             if not self.initialized:
-                self.path_follower.set_points(pts[0] if self.park else pts[1], pts[1] if self.park else pts[0])
+                self.path_follower.set_points(self.pts[0] if self.park else self.pts[1], self.pts[1] if self.park else self.pts[0])
 
             if self.path_follower.run():   # CHANGE BACK TO KINEMATIC CONTROLLER --------------------------------------- !!!
                 self.path_follower.reset()
+                self.last_park = self.park
                 self.park = not self.park
-                self.path_follower.set_points(pts[0] if self.park else pts[1], pts[1] if self.park else pts[0])
+                if not self.last_park and self.park:
+                    self.pts = [[0,0,0], [self.pts[1][0] + 50,self.pts[1][1] + 50,0]]
+                self.path_follower.set_points(self.pts[0] if self.park else self.pts[1], self.pts[1] if self.park else self.pts[0])
 
 
         elif self._mode == ControlMode.Line:
@@ -234,7 +239,7 @@ class PathFollower:
     def __init__(self, kinematic_controller: KinematicController, navigation: Navigation):
         self.s = 0.0
 
-        self.v_min = 30.0           # mm/s
+        self.v_min = 5.0           # mm/s
         self.v_target = 100.0        # mm/s
         self.v_current = self.v_min # mm/s
         self.direction = 1
@@ -252,13 +257,15 @@ class PathFollower:
 
         # Bezier curve default initialization
         self.phi_end = 0
-        self.set_points([0,0,0], [200,200,0])
 
     def run(self):
         if self.s < 1.0 and not self.end_reached:
 
             # Computing Delta Time
             dt = self.compute_dt()
+
+            if dt == -1:
+                return self.end_reached
 
             # Calculate Distance Remaining
             # approximated by the distance from the robot to P3
@@ -283,6 +290,10 @@ class PathFollower:
             if ds > 0.05:
                 ds = 0.05
             self.s += ds
+
+            #uart_int.write(f"#DEBUG# [CONTROL]: s: {self.s-ds}, ds: {ds}, v (current): {self.v_current}, v (target): {self.v_target}, v (limit): {v_limit}, v (req): {v_req}, omega: {omega}\n\n")
+
+            uart_int.write(f"s: {self.s}, v_limit: {v_limit}, v_req: {v_req}, self.v_current: {self.v_current}, self.v_target: {self.v_target}, omega: {omega}\n\n")
 
             # Termination Check
             # stop if close to end of the path
@@ -319,6 +330,11 @@ class PathFollower:
         self.prev_t = 0
         self.v_current = 0
         self.end_reached = False
+
+        # Reset KinematicController
+        self.kin_ctr.i_left = 0
+        self.kin_ctr.i_right = 0
+        self.kin_ctr.prev_t = 0
 
     def set_velocity(self, v):
         self.v_target = v

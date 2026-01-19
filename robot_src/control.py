@@ -80,8 +80,8 @@ class LineFollower:
         #kp: if langsmam + si oscila -
         #kd: if jitters - if overshoot +
 
-        self.kp = 0.005 - (3*0.0005)   -(3*0.0001)                                          #3
-        self.kd = 0.00025+(1*0.00005)    -   (0*0.00001)                                    #5
+        self.kp = 0.005 - (3*0.0005)   -(3*0.0001)      #0.0032                                    #3
+        self.kd = 0.00025+(1*0.00005)    -   (0*0.00001)       # 0.0003                             #5
 
         self.dt = 0.05
         self.prev_e = 0
@@ -244,8 +244,13 @@ class PositionController:
         self.per = perception
         self.kin = kin_controler
         
-        self.kv = 1.25                           #gain controller
+        #self.kv = 1.25        #gain controller
+        #self.kt = 0.9         #gain controller
+
+        #Proportional 
+        self.kv = 1.5        #gain controller
         self.kt = 0.9         #gain controller
+
         self.thresh = 2.0       #en mm
 
 
@@ -276,16 +281,17 @@ class PositionController:
         ephi = math.atan2(math.sin(ephi), math.cos(ephi))
 
     #Control proporcional
-      # v = dist*self.kv 
-      # w = self.kt*ephi
+     #   v = dist*self.kv 
+     #   w = self.kt*ephi
 
         vmax = 250        #mm/s
         wmax = math.pi/2      #rad/s
+        
     #Control hiperbolico, just test jeje
         v = vmax*math.tanh((self.kv*dist)/vmax)
         w = wmax*math.tanh((self.kt*ephi)/wmax)*-1
 
-        # v (mm/s) w(rad/s)
+        #v (mm/s) w(rad/s)
         self.kin.set_vw(v,w)
         self.kin.run()
 

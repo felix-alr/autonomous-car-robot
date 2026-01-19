@@ -145,6 +145,7 @@ class Navigation:
         ## dictionary for saving the detected ParkingSpots using an int as key
         self.parking_spots: dict[int, ParkingSpot] = {}
 
+        #Array for spot_id which has to be delated from parking_spots
         self.to_delete = [] 
         
         # todo students: define parcours using Line segments!
@@ -331,9 +332,13 @@ class Navigation:
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
             phi = self.angle_diff_deg(self.pose_start.phi, self.pose_end.phi)   # calculating angle between two points to filter out the corners
 
-            if a > 50 and phi < 30: # checking if it is real parkingspot
+            if a > 40 and phi < 35: # checking if it is real parkingspot
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
+
+                    # Filter out false parking spots caused by sensor noise
+                    if 280 < self.pose_start.x < 380:   
+                        return
 
                     if self.pose_start.x - self.pose_end.x < 0: 
                         self.pose_start.y = 200 # sets the y-value to a fixed preset value (line on map)
@@ -360,19 +365,22 @@ class Navigation:
                      
                 spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size)    #creating new spot
 
-                new_orient, new_line = self.spot_orientation_and_line(spot)
+                new_orient, new_line = self.spot_orientation_and_line(spot) #orientation and fixed value of the parking spot
 
-                self.to_delete.clear()
+                self.to_delete.clear()  # clearing the array of old parking spots
 
+                # Iterate through the list of parking spots to detect overlapping spots
                 for spot_id, old_spot in list(self.parking_spots.items()):
                     old_orient, old_line = self.spot_orientation_and_line(old_spot)
-
+                    # if the new spot and the old spot have different orientations, there is notthing more to compare
                     if new_orient != old_orient:
                         continue
-
+                    # old spot and new spot have the same orientation 
                     if new_orient == "x":
+                        # checking if the fixed value is the same
                         if abs(new_line - old_line)> 1e-6:
                             continue
+                        # checking if there is overlapping
                         if self.intervals_overlap(spot.x1, spot.x2, old_spot.x1, old_spot.x2):
                             self.to_delete.append(spot_id)
                     
@@ -383,8 +391,9 @@ class Navigation:
                             self.to_delete.append(spot_id)
                 
                 for spot_id in self.to_delete:
-                    self.parking_spots.pop(spot_id, None)   #Johanna fragen ob das klar geht mit None
-                
+                    # delete overlapping parkingspots from parking_spots
+                    self.parking_spots.pop(spot_id, None)  
+                # adding new parking spot to parking_spots
                 if self.parking_spots:
                     new_id = max(self.parking_spots.keys()) + 1
                 else:
@@ -394,20 +403,12 @@ class Navigation:
         return 
 
 
-    def spot_features(self, spot:ParkingSpot):
-        x1 = spot.x1
-        x2 = spot.x2
-        y1 = spot.y1
-        y2 = spot.y2
-        cx = 0.5*(x1 + x2)
-        cy = 0.5*(y1 + y2)
-        length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-        return cx, cy, length
     
+    # calculating angle difference from two values
     def angle_diff_deg(self, a, b):
         d = (a - b + 180) % 360 - 180
         return abs(d)
-    
+    # shifting pose for parkingspot (sensor is not mounted in the middle of the robot)
     def shift_along_heading(self, pose: Pose, dx: float):
         phi = pose.phi * DEG_TO_RAD
         return pose.x + math.cos(phi)*dx, pose.y + math.sin(phi)*dx

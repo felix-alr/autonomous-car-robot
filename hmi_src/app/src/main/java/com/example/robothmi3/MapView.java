@@ -57,20 +57,25 @@ public class MapView extends View {
 
         // ParkingSpot-Farben definition
         parkingPaintSuitable = new Paint();
-        parkingPaintSuitable.setColor(Color.GREEN);
-        parkingPaintSuitable.setAlpha(140);
+        //parkingPaintSuitable.setColor(Color.GREEN);
+        parkingPaintSuitable.setColor(Color.parseColor("#27C93F")); // Grün
+        parkingPaintSuitable.setAlpha(255);
+
         parkingPaintNotSuitable = new Paint();
-        parkingPaintNotSuitable.setColor(Color.RED);
-        parkingPaintNotSuitable.setAlpha(140);
+        //parkingPaintNotSuitable.setColor(Color.RED);
+        parkingPaintNotSuitable.setColor(Color.parseColor("#FF5F57")); // Rot
+        parkingPaintNotSuitable.setAlpha(255);
 
         // Pfad definition
         pathPaint = new Paint();
-        pathPaint.setColor(Color.RED);
+        //pathPaint.setColor(Color.RED);
+        pathPaint.setColor(Color.parseColor("#FF5F57")); // Rot
         pathPaint.setStrokeWidth(5f);
         pathPaint.setStyle(Paint.Style.STROKE);
 
         distanceLineColor = new Paint();
-        distanceLineColor.setColor(Color.BLUE);
+        //distanceLineColor.setColor(Color.BLUE);
+        distanceLineColor.setColor(Color.parseColor("#1E6AFF")); // Blau
         distanceLineColor.setStrokeWidth(5f);
         distanceLineColor.setStyle(Paint.Style.STROKE);
 

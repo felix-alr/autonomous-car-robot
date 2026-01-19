@@ -41,7 +41,6 @@ public class MainActivity extends AppCompatActivity
     // UI-Elemente
     private TextView textViewStatus, textViewPosX, textViewPosY, textViewPhi, textViewModus, textViewText, textViewDst, textViewEcke;
     private Button buttonConnect, buttonIdle, buttonScout, buttonParking, buttonSetup;
-    private Button parkSlotButton1;
 
     // Handler für wiederkehrende Positionsabfragen
     private Handler handler = new Handler(Looper.getMainLooper());
@@ -59,6 +58,7 @@ public class MainActivity extends AppCompatActivity
 
         // UI-Elemente verknüpfen
         buttonConnect = findViewById(R.id.buttonConnect);
+
         textViewStatus = findViewById(R.id.textViewStatus);
         textViewPosX = findViewById(R.id.textViewPosX);
         textViewPosY = findViewById(R.id.textViewPosY);
@@ -73,16 +73,21 @@ public class MainActivity extends AppCompatActivity
         buttonParking = findViewById(R.id.buttonParking); //Parkplatz anzeigen
         buttonSetup = findViewById(R.id.buttonSetup); //Kalibrieren
 
+        activeMode(buttonIdle);
+        textViewModus.setText("Modus: Idle");
+
         // Aktionen für Steuerungsbuttons
         //buttonIdle.setOnClickListener(v -> sendCommand("z\n"));
         buttonIdle.setOnClickListener(v -> {
             sendCommand("z\n");
             textViewModus.setText("Modus: Idle");
+            activeMode(buttonIdle);
         });
         //buttonScout.setOnClickListener(v -> sendCommand("y\n"));
         buttonScout.setOnClickListener(v -> {
             sendCommand("y\n");
             textViewModus.setText("Modus: Scout");
+            activeMode(buttonScout);
             //ArrayList<ParkingSpot> spots = new ArrayList<ParkingSpot>();
             //mapView.updateParkingSpots(spots);
         });
@@ -90,12 +95,15 @@ public class MainActivity extends AppCompatActivity
         buttonParking.setOnClickListener(v -> {
             anfrageParkingSpots();
             textViewModus.setText("Modus: Parking");
+            activeMode(buttonParking);
+
         });
-        //parkSlotButton1.setOnClickListener(v -> sendCommand("3\n"));
         //buttonSetup.setOnClickListener(v -> sendCommand("r\n"));
         buttonSetup.setOnClickListener(v -> {
             sendCommand("r\n");
             textViewModus.setText("Modus: SetUp");
+            activeMode(buttonSetup);
+
         });
 
         // Bluetooth-Adapter holen (null, falls Gerät kein Bluetooth unterstützt)
@@ -457,8 +465,20 @@ public class MainActivity extends AppCompatActivity
         System.out.println("sendSpotId");
     }
 
-    public void reset(){
+    private void activeMode(Button activeButton) {
+        // Alle Buttons zurücksetzen
+        buttonIdle.setBackgroundTintList(
+                getColorStateList(R.color.inactive));
+        buttonScout.setBackgroundTintList(
+                getColorStateList(R.color.inactive));
+        buttonParking.setBackgroundTintList(
+                getColorStateList(R.color.inactive));
+        buttonSetup.setBackgroundTintList(
+                getColorStateList(R.color.inactive));
 
+        // Aktiven Button hervorheben
+        activeButton.setBackgroundTintList(
+                getColorStateList(R.color.active));
     }
 
 }

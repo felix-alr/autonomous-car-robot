@@ -8,7 +8,7 @@ import time
 import parameters
 
 from perception import Perception
-from navigation import Navigation
+from navigation import RAD_TO_DEG, Navigation
 import parameters
 import math
 
@@ -43,7 +43,7 @@ class ModeController:
         self.line_follower = LineFollower(self._motors, perception)
         self.kinematic_controller = KinematicController(self._motors, self._perception)
         self.path_follower = PathFollower(self.kinematic_controller, self._navigation)
-        self.position_controller = PositionController()
+        self.position_controller = PositionController(self._perception,self._navigation,self.kinematic_controller)
 
 
         self.park = True
@@ -95,8 +95,12 @@ class LineFollower:
         # PD gains (tune as needed)
         # Actual 'functional' values
 
-        self.kp = 0.005
-        self.kd = 0.00025
+        #as comment goes the actual best values
+        #kp: if langsmam + si oscila -
+        #kd: if jitters - if overshoot +
+
+        self.kp = 0.005 - (3*0.0005)   -(3*0.0001)      #0.0032                                    #3
+        self.kd = 0.00025+(1*0.00005)    -   (0*0.00001)       # 0.0003                             #5
 
         self.dt = 0.05
         self.prev_e = 0
@@ -111,7 +115,12 @@ class LineFollower:
 
         ## As the reference = 0, the error would be -(deviation).
         error = -self._perception.get_line_deviation()
-        der = (error - self.prev_e) / self.dt  # mm/s
+
+        #used to try and smooth possible sensor delay that was causing one single shoot
+        if abs(error) < 0.5:   # mm
+            der = 0
+        else:
+            der = (error - self.prev_e) / self.dt  # mm/s
 
         # PD output in mm/s : w
         self.ctrl = self.kp * error + self.kd * der
@@ -419,14 +428,65 @@ class PathFollower:
         return dt
 
 
+##Seguir tuneando kv y kt y buscar como justificar uso de ctrl hiperbolico
 ## Controller implementing a position control algorithm.
 class PositionController:
-    def __init__(self):
-        self.target = (0, 0)
+    def __init__(self, perception, navigation, kin_controler):
+        self.target = (200,0)#aqui hardcordear target para pruebas
+        self.nav = navigation
+
+        self.per = perception
+        self.kin = kin_controler
+
+        #self.kv = 1.25        #gain controller
+        #self.kt = 0.9         #gain controller
+
+        #Proportional
+        self.kv = 1.5        #gain controller
+        self.kt = 0.9         #gain controller
+
+        self.thresh = 2.0       #en mm
+
+
 
     ## Set target position with x and y coordinate.
     def set_position(self, x, y):
         self.target = (x, y)
 
     def run(self):
-        pass
+        x, y = self.nav.get_position()
+        phi = self.nav.get_pose().phi #in rad
+
+        xd, yd = self.target
+
+        ex = xd - x
+        ey = yd - y
+        phi_des = math.atan2(ey,ex)
+
+        dist = math.sqrt((ex**2)+(ey**2))
+
+        if dist < self.thresh:
+            self.kin.set_vw(0.0, 0.0)
+            self.kin.run()
+            return
+
+        ephi = phi_des - phi
+        ephi = math.atan2(math.sin(ephi), math.cos(ephi))
+
+    #Control proporcional
+     #   v = dist*self.kv
+     #   w = self.kt*ephi
+
+        vmax = 250        #mm/s
+        wmax = math.pi/2      #rad/s
+
+    #Control hiperbolico, just test jeje
+        v = vmax*math.tanh((self.kv*dist)/vmax)
+        w = wmax*math.tanh((self.kt*ephi)/wmax)*-1
+
+        #v (mm/s) w(rad/s)
+        self.kin.set_vw(v,w)
+        self.kin.run()
+
+
+

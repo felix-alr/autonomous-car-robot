@@ -230,11 +230,7 @@ class Navigation:
                # self.set_pose_no_sync(self.pose.x, self.pose.y, self.pose.phi)
  
             
-<<<<<<< HEAD
-        #self.scan_parking_spots()
-=======
         self.scan_parking_spots()   
->>>>>>> feature/odometry
 
         # Add further function calls to be executed here.
    
@@ -330,11 +326,7 @@ class Navigation:
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
             phi = self.angle_diff_deg(self.pose_start.phi, self.pose_end.phi)   # calculating angle between two points to filter out the corners
 
-<<<<<<< HEAD
-            if a > 50 and phi < 25: # checking if it is real parkingspot
-=======
             if a > 50 and phi < 30: # checking if it is real parkingspot
->>>>>>> feature/odometry
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
 
@@ -363,16 +355,32 @@ class Navigation:
                      
                 spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size)    #creating new spot
 
-                new_center_x, new_center_y, new_length = self.spot_features(spot)
+                new_orient, new_line = self.spot_orientation_and_line(spot)
 
-                for element in self.parking_spots.values():
-                    ex_center_x, ex_center_y, ex_length = self.spot_features(element)
-                    if (math.sqrt((new_center_x - ex_center_x)**2 + (new_center_y - ex_center_y)**2) < 40) and (abs(new_length - ex_length)<40):
-                        return
+                to_delete = []
 
-                new_id = len(self.parking_spots)+1  # new id for new parkingslot
-                self.parking_spots[new_id] = spot   #adding to dict
-  
+                for spot_id, old_spot in list(self.parking_spots.items()):
+                    old_orient, old_line = self.spot_orientation_and_line(old_spot)
+
+                    if new_orient != old_orient:
+                        continue
+
+                    if new_orient == "x":
+                        if abs(new_line - old_line)> 1e-6:
+                            continue
+                        if self.intervals_overlap(spot.x1, spot.x2, old_spot.x1, old_spot.x2):
+                            to_delete.append(spot_id)
+                    
+                    else:
+                        if abs(new_line - old_line)> 1e-6:
+                            continue
+                        if self.intervals_overlap(spot.y1, spot.y2, old_spot.y1, old_spot.y2):
+                            to_delete.append(spot_id)
+                
+                for spot_id in to_delete:
+                    self.parking_spots.pop(spot_id, None)   #Johanna fragen ob das klar geht mit None
+                
+                new_id = (max(self.parking_spots.keys())+1) if self.parking_spots else self.parking_spots[new_id] = spot
         return 
 
 
@@ -385,8 +393,6 @@ class Navigation:
         cy = 0.5*(y1 + y2)
         length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
         return cx, cy, length
-<<<<<<< HEAD
-=======
     
     def angle_diff_deg(self, a, b):
         d = (a - b + 180) % 360 - 180
@@ -396,4 +402,22 @@ class Navigation:
         phi = pose.phi * DEG_TO_RAD
         return pose.x + math.cos(phi)*dx, pose.y + math.sin(phi)*dx
 
->>>>>>> feature/odometry
+
+    def spot_orientation_and_line(self, spot):
+                """
+                orient: "x" Spot liegt entlang x (y ist fix)
+                        "y" Spot liegt entlang y (x ist fix)
+                line_value: bei "x" ist es y_fix (z.B. 200)
+                            bei "y" ist es x_fix (z.B. 900 oder -100)
+                """
+                dx = abs(spot.x2 - spot.x1)
+                dy = abs(spot.y2 - spot.y1)
+                if dx >= dy:
+                    return "x", spot.y1  # y1==y2==fix
+                else:
+                    return "y", spot.x1  # x1==x2==fix
+                
+    def intervals_overlap(self,u1, u2, v1, v2):
+            lo1, hi1 = sorted((u1, u2))
+            lo2, hi2 = sorted((v1, v2))
+            return (lo1 <= hi2) and (lo2 <= hi1)

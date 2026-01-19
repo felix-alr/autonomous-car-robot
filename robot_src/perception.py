@@ -287,13 +287,8 @@ class Perception:
 
         #self.uart.write(f"diff speed: {speed_diff}\n")
 
-<<<<<<< HEAD
-        ROTATIONAL_THRESHOLD_UPPER = 15 # 25° Änderung zwischen zwei messungen erwwartet
-        ROTATIONAL_THRESHOLD_LOWER = 1.5
-=======
         ROTATIONAL_THRESHOLD_UPPER = 14 #  Änderung zwischen zwei messungen erwartet
         ROTATIONAL_THRESHOLD_LOWER = 10
->>>>>>> Perception
         #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
         #if (l1 > 10 or l2 > 10) or (l4 > 10 or l5 > 10):#hier soll er erkennen ob auf der linken oder rechten seite ein Sensor die Linie überfährt und falls, das passiert den wert line_pass auf True setzen
          #   self.line_pass = True

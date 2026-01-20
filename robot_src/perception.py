@@ -225,8 +225,8 @@ class Perception:
         #self.csv_logger = CSVLogger("corner_log.csv", ["timestamp","left_speed","right_speed","z_angle","corner_detected"])
         self.imu.enable_default()
         self.led_corner = yellow_led.YellowLED()
-        self._last_time_gyro = time.ticks_ms()
-        self._integrated_z_angle = 0.0 #°
+        #self._last_time_gyro = time.ticks_ms()
+        #self._integrated_z_angle = 0.0 #°
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
         #self._last_corner_time = 0      # Zeitmarke für den Cooldown
         #self._corner_cooldown = 1000   # Cooldown in ms
@@ -271,18 +271,18 @@ class Perception:
         #l1, l2, l3, l4 ,l5 = self.line_sensor.line_sensors.read_calibrated()
 
         #hier wird die Geschwindigkeitsdifferenz zwischen den Rädern berechnet
-        SPEED_DIFF_THRESHOLD = 1.0 # eigentlich 2
+        #SPEED_DIFF_THRESHOLD = 1.0 # eigentlich 2
         speed_diff = abs(left_speed - right_speed)
-        wheel_turning = speed_diff > SPEED_DIFF_THRESHOLD
+        #wheel_turning = speed_diff > SPEED_DIFF_THRESHOLD
 
-        now = time.ticks_ms()
-        dt = time.ticks_diff(now, self._last_time_gyro)/1000
-        self._last_time_gyro = now
+        #now = time.ticks_ms()
+        #dt = time.ticks_diff(now, self._last_time_gyro)/1000
+        #self._last_time_gyro = now
 
         self.imu.gyro.read()
         gz = self.imu.gyro.last_reading_dps[2] # Z-Achse
 
-        self._integrated_z_angle += gz * dt #°
+        #self._integrated_z_angle += gz * dt #° zuletzt auskommentiert
 
         #self.uart.write(f"diff speed: {speed_diff}\n")
 

@@ -10,3 +10,4 @@
 robot_docs/output/
 pyproject.toml
 .python-version
+.DS_Store

@@ -329,14 +329,12 @@ class PathFollower:
         self.end_reached = False
 
         # Reset KinematicController
-        self.kin_ctr.i_left = 0
-        self.kin_ctr.i_right = 0
-        self.kin_ctr.prev_t = 0
+        self.kin_ctr.reset()
 
     def initiate_pause(self):
         self.prev_t = 0
         self.v_current = 0
-        self.kin_ctr.initiate_pause()
+        self.kin_ctr.reset()
 
     def set_velocity(self, v):
         self.v_target = v

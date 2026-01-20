@@ -218,8 +218,6 @@ class KinematicController:
         self.prev_t = 0
         self.i_right = 0
         self.i_left = 0
-        self.turn_speed = 0
-        self.forward_speed = 0
 
 
 ## Controller to follow a polynomial path between a start and target pose.

@@ -225,17 +225,23 @@ class Perception:
         #self.csv_logger = CSVLogger("corner_log.csv", ["timestamp","left_speed","right_speed","z_angle","corner_detected"])
         self.imu.enable_default()
         self.led_corner = yellow_led.YellowLED()
-        self._last_time_gyro = time.ticks_ms()
-        self._integrated_z_angle = 0.0 #°
+        #self._last_time_gyro = time.ticks_ms()
+        #self._integrated_z_angle = 0.0 #°
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
-        self._last_corner_time = 0      # Zeitmarke für den Cooldown
-        self._corner_cooldown = 1000   # Cooldown in ms
-        self._corner_detected = False  
+        #self._last_corner_time = 0      # Zeitmarke für den Cooldown
+        #self._corner_cooldown = 1000   # Cooldown in ms
+        self._corner_detected = False
+        self.line_pass = False  
+        self.mag_pass = False
+        self.last_mx = None
+        self.last_my = None
 
     ## Run all update routines of the perception module.
     def update(self):
         self.wheel_speed_filter.update()
         self.get_corner()
+        #self.test_gyro_loop()
+    
 
     def get_wheel_speed_left(self):
         return self.wheel_speed_filter.get_wheel_speed_left()
@@ -262,50 +268,81 @@ class Perception:
         left_speed = self.wheel_speed_filter.get_wheel_speed_left()
         right_speed= self.wheel_speed_filter.get_wheel_speed_right()
         self.imu.read()
+        #l1, l2, l3, l4 ,l5 = self.line_sensor.line_sensors.read_calibrated()
 
-        SPEED_DIFF_THRESHOLD = 1.0 # eigentlich 2
-
+        #hier wird die Geschwindigkeitsdifferenz zwischen den Rädern berechnet
+        #SPEED_DIFF_THRESHOLD = 1.0 # eigentlich 2
         speed_diff = abs(left_speed - right_speed)
-        wheel_turning = speed_diff > SPEED_DIFF_THRESHOLD
+        #wheel_turning = speed_diff > SPEED_DIFF_THRESHOLD
 
-        now = time.ticks_ms()
-        dt = time.ticks_diff(now, self._last_time_gyro)/1000
-        self._last_time_gyro = now
+        #now = time.ticks_ms()
+        #dt = time.ticks_diff(now, self._last_time_gyro)/1000
+        #self._last_time_gyro = now
 
         self.imu.gyro.read()
         gz = self.imu.gyro.last_reading_dps[2] # Z-Achse
-        #self.uart.write(f"{gz}")
 
-        self._integrated_z_angle += gz * dt #°
+        #self._integrated_z_angle += gz * dt #° zuletzt auskommentiert
 
         #self.uart.write(f"diff speed: {speed_diff}\n")
 
-        ROTATIONAL_THRESHOLD_UPPER = 15 # 25° Änderung zwischen zwei messungen erwwartet
-        ROTATIONAL_THRESHOLD_LOWER = 1.5
+        ROTATIONAL_THRESHOLD_UPPER = 14 #  Änderung zwischen zwei messungen erwartet
+        ROTATIONAL_THRESHOLD_LOWER = 10
         #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
+        #if (l1 > 10 or l2 > 10) or (l4 > 10 or l5 > 10):#hier soll er erkennen ob auf der linken oder rechten seite ein Sensor die Linie überfährt und falls, das passiert den wert line_pass auf True setzen
+         #   self.line_pass = True
+          #  return self.line_pass
 
-        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz) >180) :#and gz >40
-            #self.uart.write("Jetzt  ")
-            self._corner_detected = True
-            #self._integrated_z_angle =0.0
-        elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER and (abs(gz) < 100):# and gz < 40
+
+        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz)>150):#gyroskop acceleration#geändert von 180
+            self.line_pass = False
+            self.mag_pass = False
+
+            #sensor auslesen
+            l1, l2, l3, l4, l5 = self.line_sensor.line_sensors.read_calibrated()
+
+             # Linie prüfen
+            if (l1 > 20 or l2 > 20) or (l4 > 20 or l5 > 20):#hier wurde der Liniensensor hinzugefügt limit von 10 auf 50 erhöht
+                self.line_pass = True
+                #self.uart.write("Linie passiert\n")
+            
+            self.imu.mag.read()
+            mx, my, mz = self.imu.mag.last_reading_gauss
+           
+           # Alte Werte initialisieren, falls noch nicht vorhanden
+            #if not hasattr(self, "last_mx"):
+             #   self.last_mx = None
+            #if not hasattr(self, "last_my"):
+             #   self.last_my = None
+            
+            #THRESHOLD_MAG = 0.2
+            if self.last_mx is not None and self.last_my is not None:
+                dx = abs(mx - self.last_mx)
+                dy = abs(my - self.last_my)
+                if dx >= 0.05 or dy >= 0.05: 
+                    self.mag_pass = True
+                    #self.uart.write(">>> ECKE ERKANNT(mag) <<<\n")
+
+                # --- Alte Werte aktualisieren ---
+            self.last_mx = mx
+            self.last_my = my
+
+            
+
+            if self.line_pass and self.mag_pass == True:
+                #self.uart.write("Jetzt  ")
+                self._corner_detected = True
+
+        elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER and (abs(gz)<100):# gyroskop acceleration
             #self.uart.write("Nicht mehr\n")
             self._corner_detected = False
+            self.line_pass = False# wieder freigegeben
+            self.mag_pass = False
             #self._integrated_z_angle = 0.0
           
         # self._integrated_z_angle =0.0
-        return self._corner_detected
-        """
-        if corner_detected:
-            if time.ticks_diff(now, self._last_corner_time) > self._corner_cooldown:
-                self._last_corner_time = now       # Cooldown starten
-                self._integrated_z_angle = 0.0       # Angle resetten
-                self.uart.write(f"Jetzt")           # EINMALIG pro Ecke
-                return True
-            else:
-                return False
+        return self._corner_detected# momentan bestehend aus dem Encoder und IMU(Gyro)
 
-        return False"""
 
     def get_wheel_distance_deviation(self) -> float:
         """
@@ -337,9 +374,9 @@ class Perception:
 
                 gx, gy, gz = self.imu.gyro.last_reading_dps
 
-                print("Gyro (dps) | X: {:7.2f}   Y: {:7.2f}   Z: {:7.2f}".format(
-                    gx, gy, gz
-                ))
+                #self.uart.write("Gyro (dps) | X: {:7.2f}   Y: {:7.2f}   Z: {:7.2f}".format(
+                 #   gx, gy, gz
+                #))
 
                 time.sleep_ms(50)
 
@@ -360,7 +397,8 @@ class Perception:
         try:
             while True:
                 # Magnetometer direkt auslesen
-                mx, my, mz = self.imu.mag.read()   # 🔥 korrekt!
+                self.imu.mag.read()
+                mx ,my, mz = self.imu.mag.last_reading_gauss 
 
                 # Heading berechnen
                 heading = math.degrees(math.atan2(my, mx))
@@ -368,16 +406,24 @@ class Perception:
                     heading += 360
 
                 print(
-                    "MAG raw | X: {:7d}   Y: {:7d}   Z: {:7d}   Heading: {:6.1f}°"
-                    .format(mx, my, mz, heading)
-                )
+                    "MAG raw | X: {:7.2f}   Y: {:7.2f}   Z: {:7.2f}   Heading: {:6.1f}°"
+                    .format(mx, my, mz, heading))
 
                 time.sleep_ms(100)
 
         except KeyboardInterrupt:
             print("Test beendet.")
 
-
-
-
-
+    def get_heading(self):
+        import math
+        import time
+        self.imu.mag.read()
+        time.sleep(0.3)
+        # Rohwerte lesen (in deiner LIS3MDL-Klasse)
+        mx, my, mz = self.imu.mag.last_reading_gauss # oder self.imu.mag.read()
+        self.uart.write(f"X= {mx} , Y= {my}")
+        heading = math.degrees(math.atan2(my, mx))
+        if heading < 0:
+            heading += 360
+        return heading
+   

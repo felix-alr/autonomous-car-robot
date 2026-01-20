@@ -82,8 +82,6 @@ class GuidanceStateMachine:
         spots = self.navigation.get_parking_spots()
         self.current_parking_spot = spots[id]
 
-        # uart.write(f"{self.current_parking_spot}")
-
     ## Generate start and end poses for the parking maneuver.
     def generate_parking_path(self):
         spot = self.current_parking_spot
@@ -127,7 +125,6 @@ class GuidanceStateMachine:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        # self.display.show_pose_and_dist(self.perception, self.navigation)
         self.show_current_state()
         # run the communicator
         self.com.run()
@@ -262,14 +259,13 @@ class GuidanceStateMachine:
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
-                    #self.control.path_follower.set_points(s_pose, e_pose)
+                    self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
                 self.display.text_line("einparken", 1)
-                self.control.run()
 
                 #exit action
-                if self.near(self.navigation.get_pose().x, self.end_pose.x, 1) and self.near(self.navigation.get_pose().y, self.end_pose.y, 1):
+                if self.control.run():
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
@@ -290,14 +286,12 @@ class GuidanceStateMachine:
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
-                    #self.control.path_follower.set_points(e_pose, s_pose)
+                    self.control.path_follower.set_points(e_pose, s_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
-                #evtl. noch Variable hinzufügen, die dem PathFollower signalisiert, dass es sich um  Ausparken handelt (pathstart = self.end_pose)
-                self.control.run()
 
                 #exit action
-                if self.near(self.navigation.get_pose().x, self.start_pose.x, 10) and self.near(self.navigation.get_pose().y, self.start_pose.y, 10):   #Prüfen, ob sich Roboter auf Startposition befindet
+                if self.control.run():   #Prüfen, ob sich Roboter auf Startposition befindet
                     self.request_state(GuidanceState.SCOUT)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()

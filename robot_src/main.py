@@ -86,8 +86,6 @@ try:
         "a": lambda: com.println(f"dec w to {con.kinematic_controller.decrease_w()}"),
 
         # DEBUG
-        "k": lambda: control_test.alter_parameters(com.uart, con, "kp"),
-        "l": lambda: control_test.alter_parameters(com.uart, con, "ki"),
         "k": lambda: control_test.alter_parameters(com.uart, con.kinematic_controller, "kp"),
         "l": lambda: control_test.alter_parameters(com.uart, con.kinematic_controller, "ki"),
     }

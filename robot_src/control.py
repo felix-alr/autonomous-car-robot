@@ -214,6 +214,13 @@ class KinematicController:
             return wheel_speed_left * 1700 / (29.59929 - 1.052107) - 300 * (29.59929 - 1.052107) / 1700
         return 0
 
+    def reset(self):
+        self.prev_t = 0
+        self.i_right = 0
+        self.i_left = 0
+        self.turn_speed = 0
+        self.forward_speed = 0
+
 
 ## Controller to follow a polynomial path between a start and target pose.
 class PathFollower:

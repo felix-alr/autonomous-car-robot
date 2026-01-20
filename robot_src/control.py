@@ -12,7 +12,7 @@ from navigation import RAD_TO_DEG, Navigation
 import parameters
 import math
 
-from machine import Pin, UART
+#from machine import Pin, UART
 
 from navigation import Pose
 
@@ -26,7 +26,7 @@ class ControlMode:
     Inactive = "Inactive"
 
 
-uart_int = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
+#uart_int = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
 
 ## Main Controller to wrap all control tasks.
@@ -46,11 +46,6 @@ class ModeController:
         self.position_controller = PositionController(self._perception,self._navigation,self.kinematic_controller)
 
 
-        self.park = True
-        self.last_park = True
-        self.initialized = False
-        self.pts = [[0,0,0], [50,50,0]]
-
     ## Select a specific control algorithm.
     #
     # @param mode The control mode to activate.
@@ -63,16 +58,7 @@ class ModeController:
             self._motors.off()
 
         elif self._mode == ControlMode.Kinematic:
-            if not self.initialized:
-                self.path_follower.set_points(self.pts[0] if self.park else self.pts[1], self.pts[1] if self.park else self.pts[0])
-
-            if self.path_follower.run():   # CHANGE BACK TO KINEMATIC CONTROLLER --------------------------------------- !!!
-                self.path_follower.reset()
-                self.last_park = self.park
-                self.park = not self.park
-                if not self.last_park and self.park:
-                    self.pts = [[0,0,0], [self.pts[1][0] + 50,self.pts[1][1] + 50,0]]
-                self.path_follower.set_points(self.pts[0] if self.park else self.pts[1], self.pts[1] if self.park else self.pts[0])
+            self.kinematic_controller.run()
 
 
         elif self._mode == ControlMode.Line:
@@ -300,10 +286,6 @@ class PathFollower:
                 ds = 0.05
             self.s += ds
 
-            #uart_int.write(f"#DEBUG# [CONTROL]: s: {self.s-ds}, ds: {ds}, v (current): {self.v_current}, v (target): {self.v_target}, v (limit): {v_limit}, v (req): {v_req}, omega: {omega}\n\n")
-
-            uart_int.write(f"s: {self.s}, v_limit: {v_limit}, v_req: {v_req}, self.v_current: {self.v_current}, self.v_target: {self.v_target}, omega: {omega}\n\n")
-
             # Termination Check
             # stop if close to end of the path
             if self.s >= 0.999 or dist_remaining < 2.0:
@@ -315,6 +297,10 @@ class PathFollower:
         else:
             self.kin_ctr.set_vw(0, 0)
             self.end_reached = True
+
+        if self.end_reached and not self.adjust_angle():
+            self.kin_ctr.run()
+            return False
 
         self.kin_ctr.run()
         return self.end_reached
@@ -349,7 +335,7 @@ class PathFollower:
         self.v_target = v
 
     def get_velocity(self):
-        return self.v
+        return self.v_current
 
     def get_position(self, s):
         om_s = 1.0 - s
@@ -406,6 +392,16 @@ class PathFollower:
         ds = (self.v_current * dt) / speed_s
 
         return ds, omega
+
+    def adjust_angle(self):
+        angle = self.nav.get_pose().phi*(math.pi/180)
+        error = (self.phi_end-angle)
+        error = math.atan2(math.sin(error), math.cos(error))
+        gain = 10
+        if abs(error) > 0.025:
+            self.kin_ctr.set_vw(0, error*gain)
+            return False
+        return True
 
     def compute_angle_adjustment_step(self):
         error = self.nav.get_pose().phi - self.phi_end

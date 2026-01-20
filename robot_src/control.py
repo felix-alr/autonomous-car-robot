@@ -54,6 +54,7 @@ class ModeController:
 
     ## Execute the selected control algorithm.
     def run(self):
+        ret = False
         if self._mode == ControlMode.Inactive:
             self._motors.off()
 
@@ -66,10 +67,11 @@ class ModeController:
 
 
         elif self._mode == ControlMode.Path:
-            self.path_follower.run()
+            ret = self.path_follower.run()
 
         elif self._mode == ControlMode.Position:
             self.position_controller.run()
+        return ret
 
 
 ## Controller for following the black parcours line.

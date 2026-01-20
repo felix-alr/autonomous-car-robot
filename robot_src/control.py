@@ -333,6 +333,11 @@ class PathFollower:
         self.kin_ctr.i_right = 0
         self.kin_ctr.prev_t = 0
 
+    def initiate_pause(self):
+        self.prev_t = 0
+        self.v_current = 0
+        self.kin_ctr.initiate_pause()
+
     def set_velocity(self, v):
         self.v_target = v
 

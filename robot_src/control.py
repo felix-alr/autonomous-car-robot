@@ -65,20 +65,10 @@ class ModeController:
             self._motors.off()
 
         elif self._mode == ControlMode.Kinematic:
-            if not self.initialized:
-                self.path_follower.set_points(self.pts[0], self.pts[1])
-            if self.path_follower.run():
-                self.path_follower.reset()
-                self.last_park = self.park
-                self.park = not self.park
-                if self.park and not self.last_park:
-                    self.pts = [self.pts[0], [self.pts[1][0] + 50, self.pts[1][1], self.pts[1][2]]]
-                    self.path_follower.set_points(self.pts[0], self.pts[1])
-
+            self.kinematic_controller.run()
 
         elif self._mode == ControlMode.Line:
             self.line_follower.run()
-
 
         elif self._mode == ControlMode.Path:
             ret = self.path_follower.run()

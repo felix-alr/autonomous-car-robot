@@ -24,6 +24,7 @@ public class MapView extends View {
 
     private Paint parkingPaintSuitable;
     private Paint parkingPaintNotSuitable;
+    private Paint distanceLineColor;
     private Bitmap mapBitmap;
     private Bitmap robotBitmap;
 
@@ -31,6 +32,9 @@ public class MapView extends View {
     private float robotX = 0;
     private float robotY = 0;
     private float robotPhi = 0;
+
+    private float robotDx = 0;
+    private float robotDy = 0;
 
     public float offsetX = 250;
     public float offsetY = 775;
@@ -53,17 +57,27 @@ public class MapView extends View {
 
         // ParkingSpot-Farben definition
         parkingPaintSuitable = new Paint();
-        parkingPaintSuitable.setColor(Color.GREEN);
-        parkingPaintSuitable.setAlpha(140);
+        //parkingPaintSuitable.setColor(Color.GREEN);
+        parkingPaintSuitable.setColor(Color.parseColor("#27C93F")); // Grün
+        parkingPaintSuitable.setAlpha(255);
+
         parkingPaintNotSuitable = new Paint();
-        parkingPaintNotSuitable.setColor(Color.RED);
-        parkingPaintNotSuitable.setAlpha(140);
+        //parkingPaintNotSuitable.setColor(Color.RED);
+        parkingPaintNotSuitable.setColor(Color.parseColor("#FF5F57")); // Rot
+        parkingPaintNotSuitable.setAlpha(255);
 
         // Pfad definition
         pathPaint = new Paint();
-        pathPaint.setColor(Color.RED);
+        //pathPaint.setColor(Color.RED);
+        pathPaint.setColor(Color.parseColor("#FF5F57")); // Rot
         pathPaint.setStrokeWidth(5f);
         pathPaint.setStyle(Paint.Style.STROKE);
+
+        distanceLineColor = new Paint();
+        //distanceLineColor.setColor(Color.BLUE);
+        distanceLineColor.setColor(Color.parseColor("#1E6AFF")); // Blau
+        distanceLineColor.setStrokeWidth(5f);
+        distanceLineColor.setStyle(Paint.Style.STROKE);
 
     }
 
@@ -93,34 +107,6 @@ public class MapView extends View {
                         ? parkingPaintSuitable
                         : parkingPaintNotSuitable;
 
-                //float scaleX = 1.1167f;
-                //float scaleY = 1.09167f;
-                //Koordinaten übernehmen
-                //float xStart =  parkingSpot.x1;
-                //float yStart = parkingSpot.y1;
-                //float xEnd   = parkingSpot.x2;
-                //float yEnd   = parkingSpot.y2;
-
-                //if (yStart == yEnd){// Horizontale Parklücke Nach Unten
-                //    xStart = offsetX+xStart*scaleX;
-                //    yStart = offsetY-yStart*scaleY;
-                //    xEnd   = offsetX+xEnd*scaleX;
-                //    yEnd   = offsetY-(yEnd-125)*scaleY;
-                //    canvas.drawRect(xStart, yStart, xEnd, yEnd, fillPaint);
-                //} else if (xStart == xEnd && yStart < yEnd) { // Vertikale Parklücke Nach Rechts
-                //    xStart = offsetX+xStart*scaleX;
-                //    yStart = offsetY-parkingSpot.y2*scaleY;
-                //    xEnd   = offsetX+(xEnd+125)*scaleX;
-                //    yEnd   = offsetY-parkingSpot.y1*scaleY;
-                //    canvas.drawRect(xStart, yStart, xEnd, yEnd, fillPaint);
-                //} else if (xStart == xEnd && yStart> yEnd) { // Vertikale Parklücke Nach Links
-                //    xStart = offsetX+(xStart-125)*scaleX;
-                //    yStart = offsetY-yStart*scaleY;
-                //    xEnd   = offsetX+xEnd*scaleX;
-                //    yEnd   = offsetY-yEnd*scaleY;
-                //    canvas.drawRect(xStart, yStart, xEnd, yEnd, fillPaint);
-                //}
-
                 // Fläche
                 //canvas.drawRect(left, top, right, bottom, fillPaint);
                 canvas.drawRect(parkingSpot.x1, parkingSpot.y1, parkingSpot.x2, parkingSpot.y2, fillPaint);
@@ -132,6 +118,9 @@ public class MapView extends View {
                 canvas.drawText("ID " + parkingSpot.id, parkingSpot.x1 + 10, parkingSpot.y1 + 40, textPaint);
             }
         }
+
+        canvas.drawLine(robotX, robotY, robotDx, robotDy, distanceLineColor);
+        //System.out.println("x1: "+robotX+" y1: "+robotY+" x2: "+robotDx+" y2: "+robotDy);
 
         // Roboter drehen + zeichnen
         canvas.save();
@@ -169,6 +158,9 @@ public class MapView extends View {
     private ParkingSpot checkParkingSpot(float x, float y) {
         for (ParkingSpot parkingSpot: parkingSpots){
             if (isBetween(x, parkingSpot.x1, parkingSpot.x2) && isBetween(y, parkingSpot.y1, parkingSpot.y2)) {
+                if (parkingSpot.suitable != 1) {
+                    return null;
+                }
                 return parkingSpot;
             }
         }
@@ -187,14 +179,18 @@ public class MapView extends View {
     /**
      * Wird von der MainActivity aufgerufen, wenn neue Positionen eintreffen.
      */
-    public void updateRobotPose(float x, float y, float phi) {
+    public void updateRobotPose(float x, float y, float phi, float dx, float dy) {
         x += offsetX;
         y += offsetY;
         phi += offsetPhi;
+        dx += offsetX;
+        dy += offsetY;
 
         robotX = x;
         robotY = y;
         robotPhi = phi;
+        robotDx = dx;
+        robotDy = dy;
 
         // Pfadpunkt hinzufügen
         pathPoints.add(new PointF(x, y));

@@ -288,6 +288,7 @@ class GuidanceStateMachine:
             if self.current_parking_state == GuidanceParkingState.HOLD:
                 if self.current_parking_state != self.last_parking_state:
                     #entry action
+                    self.display.text_line("halten", 1)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.HOLD
@@ -296,6 +297,7 @@ class GuidanceStateMachine:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     #Übergabe der Start- und Endpose an den PathFollower
+                    self.display.text_line("ausparken", 1)
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]

@@ -260,7 +260,7 @@ class GuidanceStateMachine:
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
                     self.display.text_line("einparken", 1)
-                    #self.display.text_line(f"x={s.x}", 2)
+                    self.display.text_line(f"x={s.x}", 2)
                     # self.display.long_text(f"s_pose x={s.x} y={s.y} phi={s.phi} e_pose x={e.x} y={e.y} phi={e.phi}")
 
                     self.control.path_follower.set_points(s_pose, e_pose)

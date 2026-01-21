@@ -192,6 +192,10 @@ class Navigation:
     def update(self):
         self.pose_filter.update()
         self.update_pose_distance()
+        self.rc, self.lc = self.get_counts()
+        self.uart.write(f"right_counts={self.rc}, left_counts={self.lc}")
+
+        
         # including flag for corners
         if not self.corner_correction_enabled:
         # im Setup: weder Corner noch Parklücken-Scan

@@ -102,7 +102,8 @@ class GuidanceStateMachine:
         else:
             self.start_pose = Pose(x1, y1 + 100, 0)
             self.end_pose = Pose((x1 + x2) / 2, y1 - 75, 0)
-
+        self.display.text_line(f"Startpose: x={self.start_pose.x} y={self.start_pose.y}", 4)
+        self.display.text_line(f"Startpose: x={self.end_pose.x} y={self.end_pose.y}", 5)
     ## Support function for tolerance in position checking.
     def near(self, a, b, tolerance):
         return abs(a - b) < tolerance

@@ -133,6 +133,9 @@ class Navigation:
         self.parking_spot_size = 180
         self.per = per
         self.has_flag = False
+
+        self.rc_old = 0
+        self.lc_old = 0
         
         self.pose = Pose()
         self.corner_correction_enabled = True   #Variable zur Aktivierung/Deaktivierung von Eckenerkennung (für Setup)
@@ -193,7 +196,10 @@ class Navigation:
         self.pose_filter.update()
         self.update_pose_distance()
         self.rc, self.lc = self.get_counts()
-        self.uart.write(f"right_counts={self.rc}, left_counts={self.lc}")
+        if self.rc != self.rc_old or self.lc != self.lc_old:
+            self.uart.write(f"right_counts={self.rc}, left_counts={self.lc}\n")
+            self.rc_old = self.rc
+            self.lc_old = self.lc
 
         
         # including flag for corners

@@ -45,7 +45,7 @@ class ModeController:
         self.path_follower = PathFollower(self.kinematic_controller, self._navigation)
         self.position_controller = PositionController(self._perception,self._navigation,self.kinematic_controller)
 
-        
+
     ## Select a specific control algorithm.
     #
     # @param mode The control mode to activate.

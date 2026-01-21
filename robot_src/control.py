@@ -61,10 +61,8 @@ class ModeController:
         elif self._mode == ControlMode.Kinematic:
             self.kinematic_controller.run()
 
-
         elif self._mode == ControlMode.Line:
             self.line_follower.run()
-
 
         elif self._mode == ControlMode.Path:
             ret = self.path_follower.run()
@@ -408,8 +406,10 @@ class PathFollower:
         error = (self.phi_end-angle)
         error = math.atan2(math.sin(error), math.cos(error))
         gain = 10
+        omega = error*gain if abs(error*gain) <= math.pi/3 else math.pi/3 # Cap omega to pi/3 to avoid high turning speeds
+
         if abs(error) > 0.025:
-            self.kin_ctr.set_vw(0, error*gain)
+            self.kin_ctr.set_vw(0, omega)
             return False
         return True
 

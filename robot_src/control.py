@@ -45,6 +45,12 @@ class ModeController:
         self.path_follower = PathFollower(self.kinematic_controller, self._navigation)
         self.position_controller = PositionController(self._perception,self._navigation,self.kinematic_controller)
 
+        #DEBUG
+        self.park = True
+        self.last_park = True
+        self.initialized = False
+        self.pts = [[0,0,0], [100, 100, 0]]
+
 
     ## Select a specific control algorithm.
     #
@@ -59,7 +65,15 @@ class ModeController:
             self._motors.off()
 
         elif self._mode == ControlMode.Kinematic:
-            self.kinematic_controller.run()
+            if not self.initialized:
+                self.path_follower.set_points(self.pts[0], self.pts[1])
+            if self.path_follower.run():
+                self.path_follower.reset()
+                self.last_park = self.park
+                self.park = not self.park
+                if self.park and not self.last_park:
+                    self.pts = [self.pts[0], [self.pts[1][0] + 50, self.pts[1][1], self.pts[1][2]]]
+                    self.path_follower.set_points(self.pts[0], self.pts[1])
 
 
         elif self._mode == ControlMode.Line:

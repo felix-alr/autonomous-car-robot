@@ -156,8 +156,8 @@ class KinematicController:
         self.manual_sensitivity_rot = -math.pi/4
 
         # PI parameters
-        self.kp = 0.15
-        self.ki = 0.4
+        self.kp = 0.5
+        self.ki = 2
 
         self.i_left = 0
         self.i_right = 0
@@ -243,6 +243,11 @@ class KinematicController:
         elif wheel_speed_left > 0:
             return wheel_speed_left * 1700 / (29.59929 - 1.052107) - 300 * (29.59929 - 1.052107) / 1700
         return 0
+
+    def reset(self):
+        self.prev_t = 0
+        self.i_right = 0
+        self.i_left = 0
 
 
 ## Controller to follow a polynomial path between a start and target pose.

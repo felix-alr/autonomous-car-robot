@@ -245,7 +245,6 @@ class GuidanceStateMachine:
 
                 #exit action
                 if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 0.5):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 0,5 Grad
-                    self.start_pose = self.navigation.get_pose() #Aktualisierung der Startpose mit aktueller Pose nach Ausrichten augrund der Toleranz der Startposition, für erhöhte Genauigkeit bei der Pfadfolge
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
@@ -262,7 +261,6 @@ class GuidanceStateMachine:
                     self.display.text_line("einparken", 1)
                     self.display.text_line(f"x={s.x} y={s.y}", 2)
                     self.display.text_line(f"x={e.x} y={e.y}", 3)
-                    # self.display.long_text(f"s_pose x={s.x} y={s.y} phi={s.phi} e_pose x={e.x} y={e.y} phi={e.phi}")
 
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)

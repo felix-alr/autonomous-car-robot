@@ -45,13 +45,7 @@ class ModeController:
         self.path_follower = PathFollower(self.kinematic_controller, self._navigation)
         self.position_controller = PositionController(self._perception,self._navigation,self.kinematic_controller)
 
-        #DEBUG
-        self.park = True
-        self.last_park = True
-        self.initialized = False
-        self.pts = [[0,0,0], [100, 100, 0]]
-
-
+        
     ## Select a specific control algorithm.
     #
     # @param mode The control mode to activate.
@@ -412,8 +406,10 @@ class PathFollower:
         error = (self.phi_end-angle)
         error = math.atan2(math.sin(error), math.cos(error))
         gain = 10
+        omega = error*gain if abs(error*gain) <= math.pi/3 else math.pi/3 # Cap omega to pi/3 to avoid high turning speeds
+
         if abs(error) > 0.025:
-            self.kin_ctr.set_vw(0, error*gain)
+            self.kin_ctr.set_vw(0, omega)
             return False
         return True
 

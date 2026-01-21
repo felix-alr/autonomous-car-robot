@@ -102,8 +102,8 @@ class GuidanceStateMachine:
         else:
             self.start_pose = Pose(x1, y1 + 100, 0)
             self.end_pose = Pose((x1 + x2) / 2, y1 - 75, 0)
-        self.display.text_line(f"Startpose: x={self.start_pose.x} y={self.start_pose.y}", 4)
-        self.display.text_line(f"Startpose: x={self.end_pose.x} y={self.end_pose.y}", 5)
+        self.display.text_line(f"x_s={self.start_pose.x} y_s={self.start_pose.y}", 4)
+        self.display.text_line(f"x_e={self.end_pose.x} y_e={self.end_pose.y}", 5)
     ## Support function for tolerance in position checking.
     def near(self, a, b, tolerance):
         return abs(a - b) < tolerance
@@ -260,8 +260,8 @@ class GuidanceStateMachine:
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
                     self.display.text_line("einparken", 1)
-                    self.display.text_line(f"x={s.x} y={s.y}", 2)
-                    self.display.text_line(f"x={e.x} y={e.y}", 3)
+                    self.display.text_line(f"x_s={s.x} y_s={s.y}", 2)
+                    self.display.text_line(f"x_e={e.x} y_e={e.y}", 3)
 
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)

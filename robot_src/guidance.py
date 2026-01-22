@@ -94,13 +94,13 @@ class GuidanceStateMachine:
 
         if x1 == x2:
             if y1 > y2:
-                self.start_pose = Pose(x1+ 100, y1, -90)
+                self.start_pose = Pose(x1+ 100, y1 - 20, -90)
                 self.end_pose = Pose(x1 - 75, (y1 + y2)/2, -90)
             else:
-                self.start_pose = Pose(x1 - 100, y1, 90)
+                self.start_pose = Pose(x1 - 100, y1 + 20, 90)
                 self.end_pose = Pose(x1 + 75, (y1 + y2) / 2, 90)
         else:
-            self.start_pose = Pose(x1, y1 + 100, 0)
+            self.start_pose = Pose(x1 + 20, y1 + 100, 0)
             self.end_pose = Pose((x1 + x2) / 2, y1 - 75, 0)
         #self.display.text_line(f"x_s={self.start_pose.x} y_s={self.start_pose.y}", 4)
         #self.display.text_line(f"x_e={self.end_pose.x} y_e={self.end_pose.y}", 5)
@@ -110,10 +110,11 @@ class GuidanceStateMachine:
 
     ## Request the state of next execution.
     def request_state(self, state: GuidanceState):
-        self.requested_state = state
-        if self.current_state == GuidanceState.PARKING and self.requested_state == GuidanceState.SCOUT: # Um Ausparken über Scout Befehl zu realisieren
+        if self.current_state == GuidanceState.PARKING and self.current_parking_state == GuidanceParkingState.HOLD and state == GuidanceState.SCOUT: # Um Ausparken über Scout Befehl zu realisieren
             self.requested_state = GuidanceState.PARKING
             self.current_parking_state = GuidanceParkingState.LEAVE
+            self.last_parking_state = None
+        else: self.requested_state = state
             
 
     ## Helper to print the state of current execution on the display.
@@ -126,7 +127,10 @@ class GuidanceStateMachine:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        #self.show_current_state()
+        self.show_current_state()
+        self.display.text_line(f"axis {self.navigation.axis_lock_enabled}", 3)
+        self.display.text_line(f"corner_c {self.navigation.corner_correction_enabled}", 4)
+        self.display.text_line(f"set_ang {self.navigation.set_angle_at_corner}", 5)
         # run the communicator
         self.com.run()
 
@@ -256,14 +260,16 @@ class GuidanceStateMachine:
                     # entry action
                     #Übergabe der Start- und Endpose an den PathFollower
                     self.navigation.axis_lock_enabled = False
+                    self.navigation.corner_correction_enabled = False
+                    self.navigation.set_angle_at_corner = False
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
                     self.display.text_line("einparken", 1)
-                    self.display.text_line(f"x {s_pose[0]:.0f} {e_pose[0]:.0f}", 2)
-                    self.display.text_line(f"y {s_pose[1]:.0f} {e_pose[1]:.0f}", 3)
-                    self.display.text_line(f"p {s_pose[2]:.2f} {e_pose[2]:.2f}", 4)
+                    #self.display.text_line(f"x {s_pose[0]:.0f} {e_pose[0]:.0f}", 2)
+                    #self.display.text_line(f"y {s_pose[1]:.0f} {e_pose[1]:.0f}", 3)
+                    #self.display.text_line(f"p {s_pose[2]:.2f} {e_pose[2]:.2f}", 4)
 
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
@@ -280,6 +286,9 @@ class GuidanceStateMachine:
             if self.current_parking_state == GuidanceParkingState.HOLD:
                 if self.current_parking_state != self.last_parking_state:
                     #entry action
+                    self.navigation.axis_lock_enabled = False
+                    self.navigation.corner_correction_enabled = False
+                    self.navigation.set_angle_at_corner = False
                     self.display.text_line("halten", 1)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
@@ -289,15 +298,18 @@ class GuidanceStateMachine:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     #Übergabe der Start- und Endpose an den PathFollower
+                    self.navigation.axis_lock_enabled = False
+                    self.navigation.corner_correction_enabled = False
+                    self.navigation.set_angle_at_corner = False
                     self.display.text_line("ausparken", 1)
-                    self.control.path_follower.reset()
+                    #self.control.path_follower.reset()
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
-                    self.display.text_line(f"x {s_pose[0]:.0f} {e_pose[0]:.0f}", 2)
-                    self.display.text_line(f"y {s_pose[1]:.0f} {e_pose[1]:.0f}", 3)
-                    self.display.text_line(f"p {s_pose[2]:.2f} {e_pose[2]:.2f}", 4)
+                    #self.display.text_line(f"x {s_pose[0]:.0f} {e_pose[0]:.0f}", 2)
+                    #self.display.text_line(f"y {s_pose[1]:.0f} {e_pose[1]:.0f}", 3)
+                    #self.display.text_line(f"p {s_pose[2]:.2f} {e_pose[2]:.2f}", 4)
                     self.control.path_follower.set_points(e_pose, s_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action

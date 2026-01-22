@@ -111,7 +111,7 @@ class GuidanceStateMachine:
         if self.current_state == GuidanceState.PARKING and state == GuidanceState.SCOUT: # Um Ausparken über Scout Befehl zu realisieren
             self.requested_state = GuidanceState.PARKING
             self.current_parking_state = GuidanceParkingState.LEAVE
-            self.last_parking_state = None
+            #self.last_parking_state = None #Auskommentiert, damit der Pfadregler nicht zurückgesetzt wird bei LEAVE > IDLE > LEAVE
         else: self.requested_state = state
             
 
@@ -252,7 +252,7 @@ class GuidanceStateMachine:
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
-                #self.display.text_line("einparken", 1)
+                self.display.text_line("einparken", 1)
 
                 #exit action
                 if self.control.run():

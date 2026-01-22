@@ -94,14 +94,14 @@ class GuidanceStateMachine:
 
         if x1 == x2:
             if y1 > y2:
-                self.start_pose = Pose(x1+ 100, y1 - 20, -90)
-                self.end_pose = Pose(x1 - 75, (y1 + y2)/2, -90)
+                self.start_pose = Pose(x1+ 100, y1 - 50, -90)
+                self.end_pose = Pose(x1 - 75, (y1 + y2)*2/3, -90)
             else:
-                self.start_pose = Pose(x1 - 100, y1 + 20, 90)
-                self.end_pose = Pose(x1 + 75, (y1 + y2) / 2, 90)
+                self.start_pose = Pose(x1 - 100, y1 + 50, 90)
+                self.end_pose = Pose(x1 + 75, (y1 + y2)*2/3, 90)
         else:
-            self.start_pose = Pose(x1 + 20, y1 + 100, 0)
-            self.end_pose = Pose((x1 + x2) / 2, y1 - 75, 0)
+            self.start_pose = Pose(x1 + 50, y1 + 100, 0)
+            self.end_pose = Pose((x1 + x2)*2/3, y1 - 75, 0)
 
     ## Support function for tolerance in position checking.
     def near(self, a, b, tolerance):
@@ -134,6 +134,7 @@ class GuidanceStateMachine:
         if self.current_state == GuidanceState.IDLE:
             if self.current_state != self.last_state:
                 # entry action
+                self.control.path_follower.initiate_pause()
                 self.last_parking_state = None # Damit die Eingangsaktion nach Stoppen und Rückkehr in den Parkmodus erneut ausgeführt wird
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()

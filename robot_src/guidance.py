@@ -94,16 +94,16 @@ class GuidanceStateMachine:
 
         if x1 == x2:
             if y1 > y2:
-                self.start_pose = Pose(x1+ 100, y1, 270)
-                self.end_pose = Pose(x1 - 75, (y1 + y2)/2, 270)
+                self.start_pose = Pose(x1+ 100, y1, -90)
+                self.end_pose = Pose(x1 - 75, (y1 + y2)/2, -90)
             else:
                 self.start_pose = Pose(x1 - 100, y1, 90)
                 self.end_pose = Pose(x1 + 75, (y1 + y2) / 2, 90)
         else:
             self.start_pose = Pose(x1, y1 + 100, 0)
             self.end_pose = Pose((x1 + x2) / 2, y1 - 75, 0)
-        self.display.text_line(f"x_s={self.start_pose.x} y_s={self.start_pose.y}", 4)
-        self.display.text_line(f"x_e={self.end_pose.x} y_e={self.end_pose.y}", 5)
+        #self.display.text_line(f"x_s={self.start_pose.x} y_s={self.start_pose.y}", 4)
+        #self.display.text_line(f"x_e={self.end_pose.x} y_e={self.end_pose.y}", 5)
     ## Support function for tolerance in position checking.
     def near(self, a, b, tolerance):
         return abs(a - b) < tolerance
@@ -126,7 +126,7 @@ class GuidanceStateMachine:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        self.show_current_state()
+        #self.show_current_state()
         # run the communicator
         self.com.run()
 
@@ -232,37 +232,38 @@ class GuidanceStateMachine:
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
-                    self.current_parking_state = GuidanceParkingState.ALIGN
+                    self.current_parking_state = GuidanceParkingState.PARK
             # ausrichten
-            if self.current_parking_state == GuidanceParkingState.ALIGN:
-                if self.current_parking_state != self.last_parking_state:
+            #if self.current_parking_state == GuidanceParkingState.ALIGN:
+             #   if self.current_parking_state != self.last_parking_state:
                     # entry action
-                    self.navigation.axis_lock_enabled = False
-                    self.control.set_mode(ControlMode.Kinematic)
-                    self.control.kinematic_controller.set_vw(0, 0.5) # Wert verändern?
+              #      self.navigation.axis_lock_enabled = False
+               #     self.control.set_mode(ControlMode.Kinematic)
+                #    self.control.kinematic_controller.set_vw(0, 0.5) # Wert verändern?
                 # nominal action
-                self.display.text_line("ausrichten", 1)
-                self.control.run()
+               # self.display.text_line("ausrichten", 1)
+                #self.control.run()
 
                 #exit action
-                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 1):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 1 Grad
-                    self.control.set_mode(ControlMode.Inactive)
-                    self.control.run()
-                    self.last_parking_state = self.current_parking_state
-                    self.current_parking_state = GuidanceParkingState.PARK
+                #if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 1):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 1 Grad
+                 #   self.control.set_mode(ControlMode.Inactive)
+                  #  self.control.run()
+                   # self.last_parking_state = self.current_parking_state
+                    #self.current_parking_state = GuidanceParkingState.PARK
             # einparken
             if self.current_parking_state == GuidanceParkingState.PARK:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     #Übergabe der Start- und Endpose an den PathFollower
+                    self.navigation.axis_lock_enabled = False
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
                     self.display.text_line("einparken", 1)
-                    self.display.text_line(f"x {s_pose[0]} {e_pose[0]}", 2)
-                    self.display.text_line(f"y {s_pose[1]} {e_pose[1]}", 3)
-                    self.display.text_line(f"p {s_pose[2]} {e_pose[2]}", 4)
+                    self.display.text_line(f"x {s_pose[0]:.0f} {e_pose[0]:.0f}", 2)
+                    self.display.text_line(f"y {s_pose[1]:.0f} {e_pose[1]:.0f}", 3)
+                    self.display.text_line(f"p {s_pose[2]:.2f} {e_pose[2]:.2f}", 4)
 
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
@@ -289,13 +290,14 @@ class GuidanceStateMachine:
                     # entry action
                     #Übergabe der Start- und Endpose an den PathFollower
                     self.display.text_line("ausparken", 1)
+                    self.control.path_follower.reset()
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
-                    self.display.text_line(f"x {s_pose[0]} {e_pose[0]}", 2)
-                    self.display.text_line(f"y {s_pose[1]} {e_pose[1]}", 3)
-                    self.display.text_line(f"p {s_pose[2]} {e_pose[2]}", 4)
+                    self.display.text_line(f"x {s_pose[0]:.0f} {e_pose[0]:.0f}", 2)
+                    self.display.text_line(f"y {s_pose[1]:.0f} {e_pose[1]:.0f}", 3)
+                    self.display.text_line(f"p {s_pose[2]:.2f} {e_pose[2]:.2f}", 4)
                     self.control.path_follower.set_points(e_pose, s_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action

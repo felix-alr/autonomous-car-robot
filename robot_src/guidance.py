@@ -239,13 +239,13 @@ class GuidanceStateMachine:
                     # entry action
                     self.navigation.axis_lock_enabled = False
                     self.control.set_mode(ControlMode.Kinematic)
-                    self.control.kinematic_controller.set_vw(0, 0.3) # Wert verändern?
+                    self.control.kinematic_controller.set_vw(0, 0.5) # Wert verändern?
                 # nominal action
                 self.display.text_line("ausrichten", 1)
                 self.control.run()
 
                 #exit action
-                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 0.5):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 0,5 Grad
+                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 1):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 1 Grad
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
@@ -260,8 +260,9 @@ class GuidanceStateMachine:
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
                     self.display.text_line("einparken", 1)
-                    self.display.text_line(f"x_s={s.x} y_s={s.y}", 2)
-                    self.display.text_line(f"x_e={e.x} y_e={e.y}", 3)
+                    self.display.text_line(f"x {s_pose[0]} {e_pose[0]}", 2)
+                    self.display.text_line(f"y {s_pose[1]} {e_pose[1]}", 3)
+                    self.display.text_line(f"p {s_pose[2]} {e_pose[2]}", 4)
 
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
@@ -292,6 +293,9 @@ class GuidanceStateMachine:
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
+                    self.display.text_line(f"x {s_pose[0]} {e_pose[0]}", 2)
+                    self.display.text_line(f"y {s_pose[1]} {e_pose[1]}", 3)
+                    self.display.text_line(f"p {s_pose[2]} {e_pose[2]}", 4)
                     self.control.path_follower.set_points(e_pose, s_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action

@@ -108,7 +108,7 @@ class GuidanceStateMachine:
 
     ## Request the state of next execution.
     def request_state(self, state: GuidanceState):
-        if self.current_state == GuidanceState.PARKING and self.current_parking_state == GuidanceParkingState.HOLD and state == GuidanceState.SCOUT: # Um Ausparken über Scout Befehl zu realisieren
+        if self.current_state == GuidanceState.PARKING and state == GuidanceState.SCOUT: # Um Ausparken über Scout Befehl zu realisieren
             self.requested_state = GuidanceState.PARKING
             self.current_parking_state = GuidanceParkingState.LEAVE
             self.last_parking_state = None
@@ -267,7 +267,7 @@ class GuidanceStateMachine:
                     self.navigation.axis_lock_enabled = False
                     self.navigation.corner_correction_enabled = False
                     self.navigation.set_angle_at_corner = False
-                    #self.display.text_line("halten", 1)
+                    self.display.text_line("halten", 1)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.HOLD

@@ -128,9 +128,7 @@ class GuidanceStateMachine:
         self.perception.update()
         self.navigation.update()
         self.show_current_state()
-        self.display.text_line(f"axis {self.navigation.axis_lock_enabled}", 3)
-        self.display.text_line(f"corner_c {self.navigation.corner_correction_enabled}", 4)
-        self.display.text_line(f"set_ang {self.navigation.set_angle_at_corner}", 5)
+        
         # run the communicator
         self.com.run()
 
@@ -205,6 +203,9 @@ class GuidanceStateMachine:
                 self.navigation.axis_lock_enabled = True # axis lock nach Parken wieder einschalten
                 self.navigation.corner_correction_enabled = True    #Eckenerkennung darf aktiviert werden
                 self.navigation.set_angle_at_corner = True #"Winkel an Ecken setzen" nach Parken wieder aktivieren
+                self.display.text_line(f"axis {self.navigation.axis_lock_enabled}", 3)
+                self.display.text_line(f"corner_c {self.navigation.corner_correction_enabled}", 4)
+                self.display.text_line(f"set_ang {self.navigation.set_angle_at_corner}", 5)
                 # entry action
                 self.control.set_mode(ControlMode.Line)
                 self.current_parking_state = GuidanceParkingState.APPROACH #Damit der Roboter nach der Parklückensuche beim Übergang in den Zustand parking immer erstmal die Parklücke anfährt
@@ -227,6 +228,9 @@ class GuidanceStateMachine:
                     # entry action
                     self.navigation.set_angle_at_corner = False # beim Anfahren den Winkel nicht zurücksetzen
                     self.control.set_mode(ControlMode.Line)
+                    self.display.text_line(f"axis {self.navigation.axis_lock_enabled}", 3)
+                    self.display.text_line(f"corner_c {self.navigation.corner_correction_enabled}", 4)
+                    self.display.text_line(f"set_ang {self.navigation.set_angle_at_corner}", 5)
                 # nominal action
                 self.control.run()
                 self.display.text_line("anfahren", 1)
@@ -302,7 +306,7 @@ class GuidanceStateMachine:
                     self.navigation.corner_correction_enabled = False
                     self.navigation.set_angle_at_corner = False
                     self.display.text_line("ausparken", 1)
-                    #self.control.path_follower.reset()
+                    self.control.path_follower.reset()
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
@@ -312,10 +316,11 @@ class GuidanceStateMachine:
                     #self.display.text_line(f"p {s_pose[2]:.2f} {e_pose[2]:.2f}", 4)
                     self.control.path_follower.set_points(e_pose, s_pose)
                     self.control.set_mode(ControlMode.Path)
+                    self.last_parking_state = self.current_parking_state
                 # nominal action
 
                 #exit action
-                if self.control.run():   #Prüfen, ob sich Roboter auf Startposition befindet
+                elif self.control.run():   #Prüfen, ob sich Roboter auf Startposition befindet
                     self.request_state(GuidanceState.SCOUT)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()

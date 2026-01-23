@@ -91,17 +91,16 @@ class GuidanceStateMachine:
         x2 = spot.x2
         y2 = spot.y2
 
-
         if x1 == x2:
             if y1 > y2:
-                self.start_pose = Pose(x1+ 100, y1, 270)
-                self.end_pose = Pose(x1 - 75, (y1 + y2)/2, 270)
+                self.start_pose = Pose(x1+ 100, y1 - 50, -90)
+                self.end_pose = Pose(x1 - 75, y1 - 150, -90)
             else:
-                self.start_pose = Pose(x1 - 100, y1, 90)
-                self.end_pose = Pose(x1 + 75, (y1 + y2) / 2, 90)
+                self.start_pose = Pose(x1 - 100, y1 + 50, 90)
+                self.end_pose = Pose(x1 + 75, y1 + 150, 90)
         else:
-            self.start_pose = Pose(x1, y1 + 100, 0)
-            self.end_pose = Pose((x1 + x2) / 2, y1 - 75, 0)
+            self.start_pose = Pose(x1 + 50, y1 + 100, 0)
+            self.end_pose = Pose(x1 + 150, y1 - 75, 0)
 
     ## Support function for tolerance in position checking.
     def near(self, a, b, tolerance):
@@ -110,9 +109,6 @@ class GuidanceStateMachine:
     ## Request the state of next execution.
     def request_state(self, state: GuidanceState):
         self.requested_state = state
-        if self.current_state == GuidanceState.PARKING and self.requested_state == GuidanceState.SCOUT: # Um Ausparken über Scout Befehl zu realisieren
-            self.requested_state = GuidanceState.PARKING
-            self.current_parking_state = GuidanceParkingState.LEAVE
             
 
     ## Helper to print the state of current execution on the display.
@@ -126,13 +122,18 @@ class GuidanceStateMachine:
         self.perception.update()
         self.navigation.update()
         self.show_current_state()
+        
         # run the communicator
         self.com.run()
-
+        if self.current_state == GuidanceState.SCOUT and self.current_parking_state in (GuidanceParkingState.HOLD, GuidanceParkingState.LEAVE):
+            self.current_state = GuidanceState.PARKING
+            self.last_parking_state = self.current_parking_state
+            self.current_parking_state = GuidanceParkingState.LEAVE
+        
         if self.current_state == GuidanceState.IDLE:
             if self.current_state != self.last_state:
                 # entry action
-                self.last_parking_state = None # Damit die Eingangsaktion nach Stoppen und Rückkehr in den Parkmodus erneut ausgeführt wird
+                self.control.path_follower.initiate_pause()
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
 
@@ -222,6 +223,7 @@ class GuidanceStateMachine:
                     # entry action
                     self.navigation.set_angle_at_corner = False # beim Anfahren den Winkel nicht zurücksetzen
                     self.control.set_mode(ControlMode.Line)
+
                 # nominal action
                 self.control.run()
                 self.display.text_line("anfahren", 1)
@@ -231,34 +233,21 @@ class GuidanceStateMachine:
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
-                    self.current_parking_state = GuidanceParkingState.ALIGN
-            # ausrichten
-            if self.current_parking_state == GuidanceParkingState.ALIGN:
-                if self.current_parking_state != self.last_parking_state:
-                    # entry action
-                    self.navigation.axis_lock_enabled = False
-                    self.control.set_mode(ControlMode.Kinematic)
-                    self.control.kinematic_controller.set_vw(0, 0.3) # Wert verändern?
-                # nominal action
-                self.display.text_line("ausrichten", 1)
-                self.control.run()
-
-                #exit action
-                if self.near(self.navigation.get_pose().phi, self.start_pose.phi, 0.5):   #Prüfen, ob sich Roboter in Ausrichtungswinkel befindet mit Toleranz von 0,5 Grad
-                    self.start_pose = self.navigation.get_pose() #Aktualisierung der Startpose mit aktueller Pose nach Ausrichten augrund der Toleranz der Startposition, für erhöhte Genauigkeit bei der Pfadfolge
-                    self.control.set_mode(ControlMode.Inactive)
-                    self.control.run()
-                    self.last_parking_state = self.current_parking_state
                     self.current_parking_state = GuidanceParkingState.PARK
+            #Ausrichten entfernt, da aktueller Winkel in 270 Grad gegeben wird während die startpose den Winkel in -90 Grad angibt
             # einparken
             if self.current_parking_state == GuidanceParkingState.PARK:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     #Übergabe der Start- und Endpose an den PathFollower
+                    self.navigation.axis_lock_enabled = False
+                    self.navigation.corner_correction_enabled = False
+                    self.navigation.set_angle_at_corner = False
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
+
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
@@ -268,12 +257,17 @@ class GuidanceStateMachine:
                 if self.control.run():
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
+                    self.control.path_follower.reset()
                     self.last_parking_state = self.current_parking_state
                     self.current_parking_state = GuidanceParkingState.HOLD
             # halten
             if self.current_parking_state == GuidanceParkingState.HOLD:
                 if self.current_parking_state != self.last_parking_state:
                     #entry action
+                    self.navigation.axis_lock_enabled = False
+                    self.navigation.corner_correction_enabled = False
+                    self.navigation.set_angle_at_corner = False
+                    self.display.text_line("halten", 1)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.HOLD
@@ -282,20 +276,27 @@ class GuidanceStateMachine:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     #Übergabe der Start- und Endpose an den PathFollower
+                    self.navigation.axis_lock_enabled = False
+                    self.navigation.corner_correction_enabled = False
+                    self.navigation.set_angle_at_corner = False
+                    self.display.text_line("ausparken", 1)
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
                     self.control.path_follower.set_points(e_pose, s_pose)
-                    self.control.set_mode(ControlMode.Path)
+                    self.last_parking_state = self.current_parking_state
+                    
                 # nominal action
-
-                #exit action
+                self.control.set_mode(ControlMode.Path)
                 if self.control.run():   #Prüfen, ob sich Roboter auf Startposition befindet
+                    #exit action
                     self.request_state(GuidanceState.SCOUT)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
+                    self.control.path_follower.reset() #Um Regler für nächsten Parkvorgang zurückzusetzen
                     self.last_parking_state = self.current_parking_state
+                    self.current_parking_state = None
 
             if self.requested_state and self.requested_state != GuidanceState.PARKING:
                 # exit action

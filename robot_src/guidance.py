@@ -80,7 +80,10 @@ class GuidanceStateMachine:
         # todo students: request suitable GuidanceState here, process the id ...
         self.request_state(GuidanceState.PARKING)
         spots = self.navigation.get_parking_spots()
-        self.current_parking_spot = spots[id]
+        if spots is None:
+            return
+        if self.current_parking_state == None or self.current_parking_state == GuidanceParkingState.APPROACH:
+            self.current_parking_spot = spots[id]
 
     ## Generate start and end poses for the parking maneuver.
     def generate_parking_path(self):
@@ -94,13 +97,13 @@ class GuidanceStateMachine:
         if x1 == x2:
             if y1 > y2:
                 self.start_pose = Pose(x1+ 100, y1 - 50, -90)
-                self.end_pose = Pose(x1 - 75, y1 - 150, -90)
+                self.end_pose = Pose(x1 - 80, y1 - 150, -90)
             else:
                 self.start_pose = Pose(x1 - 100, y1 + 50, 90)
-                self.end_pose = Pose(x1 + 75, y1 + 150, 90)
+                self.end_pose = Pose(x1 + 80, y1 + 150, 90)
         else:
             self.start_pose = Pose(x1 + 50, y1 + 100, 0)
-            self.end_pose = Pose(x1 + 150, y1 - 75, 0)
+            self.end_pose = Pose(x1 + 150, y1 - 80, 0)
 
     ## Support function for tolerance in position checking.
     def near(self, a, b, tolerance):
@@ -121,7 +124,7 @@ class GuidanceStateMachine:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        self.show_current_state()
+        #self.show_current_state()
         
         # run the communicator
         self.com.run()
@@ -187,7 +190,7 @@ class GuidanceStateMachine:
                 if self.navigation.get_pose().phi <= 0.0:
                     self._motors.set_speeds(0, 0)
                     self.current_setup_state = GuidanceSetupState.DONE
-
+            self.display.clear # funktioniert nicht
             if self.current_setup_state == GuidanceSetupState.DONE:
                 self.request_state(GuidanceState.IDLE)
 
@@ -226,7 +229,7 @@ class GuidanceStateMachine:
 
                 # nominal action
                 self.control.run()
-                self.display.text_line("anfahren", 1)
+                #self.display.text_line("anfahren", 1)
 
                 #exit action (nur beim Übergang in anderen Unterzustand)
                 if self.near(self.navigation.get_pose().x, self.start_pose.x, 10) and self.near(self.navigation.get_pose().y, self.start_pose.y, 10):   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 10 mm   
@@ -251,7 +254,7 @@ class GuidanceStateMachine:
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
                 # nominal action
-                self.display.text_line("einparken", 1)
+                #self.display.text_line("einparken", 1)
 
                 #exit action
                 if self.control.run():
@@ -267,7 +270,7 @@ class GuidanceStateMachine:
                     self.navigation.axis_lock_enabled = False
                     self.navigation.corner_correction_enabled = False
                     self.navigation.set_angle_at_corner = False
-                    self.display.text_line("halten", 1)
+                    #self.display.text_line("halten", 1)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.HOLD
@@ -279,7 +282,7 @@ class GuidanceStateMachine:
                     self.navigation.axis_lock_enabled = False
                     self.navigation.corner_correction_enabled = False
                     self.navigation.set_angle_at_corner = False
-                    self.display.text_line("ausparken", 1)
+                    #self.display.text_line("ausparken", 1)
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]

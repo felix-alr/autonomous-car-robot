@@ -108,11 +108,7 @@ class GuidanceStateMachine:
 
     ## Request the state of next execution.
     def request_state(self, state: GuidanceState):
-        if self.current_state == GuidanceState.PARKING and state == GuidanceState.SCOUT: # Um Ausparken über Scout Befehl zu realisieren
-            self.requested_state = GuidanceState.PARKING
-            self.current_parking_state = GuidanceParkingState.LEAVE
-            #self.last_parking_state = None #Auskommentiert, damit der Pfadregler nicht zurückgesetzt wird bei LEAVE > IDLE > LEAVE
-        else: self.requested_state = state
+        self.requested_state = state
             
 
     ## Helper to print the state of current execution on the display.
@@ -129,12 +125,15 @@ class GuidanceStateMachine:
         
         # run the communicator
         self.com.run()
-
+        if self.current_state == GuidanceState.SCOUT and self.current_parking_state in (GuidanceParkingState.HOLD, GuidanceParkingState.LEAVE):
+            self.current_state = GuidanceState.PARKING
+            self.last_parking_state = self.current_parking_state
+            self.current_parking_state = GuidanceParkingState.LEAVE
+        
         if self.current_state == GuidanceState.IDLE:
             if self.current_state != self.last_state:
                 # entry action
                 self.control.path_follower.initiate_pause()
-                self.last_parking_state = None # Damit die Eingangsaktion nach Stoppen und Rückkehr in den Parkmodus erneut ausgeführt wird
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
 
@@ -258,6 +257,7 @@ class GuidanceStateMachine:
                 if self.control.run():
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
+                    self.control.path_follower.reset()
                     self.last_parking_state = self.current_parking_state
                     self.current_parking_state = GuidanceParkingState.HOLD
             # halten
@@ -280,23 +280,23 @@ class GuidanceStateMachine:
                     self.navigation.corner_correction_enabled = False
                     self.navigation.set_angle_at_corner = False
                     self.display.text_line("ausparken", 1)
-                    self.control.path_follower.reset()
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0]
                     e_pose = [e.x, e.y, e.phi * pi / 180.0]
                     self.control.path_follower.set_points(e_pose, s_pose)
-                    self.control.set_mode(ControlMode.Path)
                     self.last_parking_state = self.current_parking_state
+                    
                 # nominal action
-
-                #exit action
-                elif self.control.run():   #Prüfen, ob sich Roboter auf Startposition befindet
+                self.control.set_mode(ControlMode.Path)
+                if self.control.run():   #Prüfen, ob sich Roboter auf Startposition befindet
+                    #exit action
                     self.request_state(GuidanceState.SCOUT)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
-                    self.control.path_follower.reset()
+                    self.control.path_follower.reset() #Um Regler für nächsten Parkvorgang zurückzusetzen
                     self.last_parking_state = self.current_parking_state
+                    self.current_parking_state = None
 
             if self.requested_state and self.requested_state != GuidanceState.PARKING:
                 # exit action

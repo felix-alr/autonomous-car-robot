@@ -311,17 +311,29 @@ class PathFollower:
         return self.end_reached
 
     def set_points(self, p_start, p_end):
-        phi_start = p_start[2]
-        self.phi_end = p_end[2]
-        horizontal = math.cos(phi_start) > 1/math.sqrt(2) or math.cos(phi_start) < -1/math.sqrt(2)
-        delta = (p_end[0] - p_start[0]) if horizontal else (p_end[1] - p_start[1])
-        if delta < 0:
-            self.direction = -1
-        else:
-            self.direction = 1
+        # Normalizing angles
+        phi_start = math.atan2(math.sin(p_start[2]), math.cos(p_start[2]))
+        self.phi_end = math.atan2(math.sin(p_end[2]), math.cos(p_end[2]))
+
+        # Calculating differences from start to end for calculating handles and drive direction
+        dx = p_end[0] - p_start[0]
+        dy = p_end[1] - p_start[1]
+
+        # Determining whether the path should be oriented horizontally or vertically
+        horizontal = math.cos(phi_start) > 1 / math.sqrt(2) or math.cos(phi_start) < -1 / math.sqrt(2)
+        delta = abs(dx) if horizontal else abs(dy)
+
+        # Computing dot product between the forward direction vector of the robot and the direction vector of the path to determine a drive direction for the robot
+        # (forward/backward)
+        dot = dx * math.cos(phi_start) + dy * math.sin(phi_start)
+        self.direction = -1 if dot < 0 else 1
+
+        # Calculating points for bezier curve
         self.p0 = [p_start[0], p_start[1]]
-        self.p1 = [p_start[0] + delta/3*math.cos(phi_start), p_start[1] + delta/3*math.sin(phi_start)]
-        self.p2 = [p_end[0] - delta/3*math.cos(self.phi_end), p_end[1] - delta/3*math.sin(self.phi_end)]
+        self.p1 = [p_start[0] + delta / 3 * math.cos(phi_start) * self.direction,
+                   p_start[1] + delta / 3 * math.sin(phi_start) * self.direction]
+        self.p2 = [p_end[0] - delta / 3 * math.cos(self.phi_end) * self.direction,
+                   p_end[1] - delta / 3 * math.sin(self.phi_end) * self.direction]
         self.p3 = [p_end[0], p_end[1]]
 
     def reset(self):

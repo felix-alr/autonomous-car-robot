@@ -95,14 +95,14 @@ class GuidanceStateMachine:
 
         if x1 == x2:
             if y1 > y2:
-                self.start_pose = Pose(x1+ 100, y1 - 50, 270)
-                self.end_pose = Pose(x1 - 80, y1 - 150, 270)
+                self.start_pose = Pose(x1+ 100, y1 - 60, 270)
+                self.end_pose = Pose(x1 - 80, y1 - 110, 270)
             else:
-                self.start_pose = Pose(x1 - 100, y1 + 50, 90)
-                self.end_pose = Pose(x1 + 80, y1 + 150, 90)
+                self.start_pose = Pose(x1 - 100, y1 + 60, 90)
+                self.end_pose = Pose(x1 + 80, y1 + 110, 90)
         else:
-            self.start_pose = Pose(x1 + 50, y1 + 100, 0)
-            self.end_pose = Pose(x1 + 150, y1 - 80, 0)
+            self.start_pose = Pose(x1 + 60, y1 + 100, 0)
+            self.end_pose = Pose(x1 + 110, y1 - 80, 0)
 
     ## Support function for tolerance in position checking.
     def near(self, a, b, tolerance):
@@ -232,7 +232,7 @@ class GuidanceStateMachine:
                 #self.display.text_line("anfahren", 1)
 
                 #exit action (nur beim Übergang in anderen Unterzustand)
-                if self.near(self.navigation.get_pose().x, self.start_pose.x, 10) and self.near(self.navigation.get_pose().y, self.start_pose.y, 10):   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 10 mm   
+                if self.near(self.navigation.get_pose().x, self.start_pose.x, 5) and self.near(self.navigation.get_pose().y, self.start_pose.y, 5):   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state

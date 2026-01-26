@@ -1,10 +1,16 @@
 ## @package navigation
 #
-# REMOVED ist hier der Chef
+#
+#
+# Gruppe HSAMR01
+# REMOVED 
+# Matrikel-Nr.: REMOVED
+#
+#
 # Module to implement localization of the robot and parking spot detection.
 
 # for communication
-from machine import Pin, UART
+# from machine import Pin, UART
 
 
 from math import sin, cos, atan2, sqrt, pi
@@ -130,7 +136,7 @@ class ParkingSpot:
 class Navigation:
     def __init__(self, per: Perception):
         self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
-        self.parking_spot_size = 180
+        self.parking_spot_size = 210    # Parkplatzgröße entscheidet über Eignung der Parklücke zum parken
         self.per = per
         self.has_flag = False
         
@@ -139,7 +145,7 @@ class Navigation:
         self.axis_lock_enabled = True #Variable zur Aktivierung/Deaktivierung der festen Koordinatenachsen
         self.set_angle_at_corner = True #Variable zur Aktivierung/Deaktivierung der Winkelaktualisierung an den Ecken
         #Kommunikation (Test)
-        self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
+        # self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key
@@ -172,8 +178,8 @@ class Navigation:
             Pose(0,600,270),
             ]
          
-        self.closest_line = self.parcours[0]
-        self.idx = -1
+        self.closest_line = self.parcours[0] #Initialisierung der Variable 'closest_line' mit dem Eintrag [0] des parcours Array 
+        self.idx = -1   # Index zum zählen der Ecken
 
     ## Return a map of the parcours.
     #
@@ -332,7 +338,7 @@ class Navigation:
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
             phi = self.angle_diff_deg(self.pose_start.phi, self.pose_end.phi)   # calculating angle between two points to filter out the corners
 
-            if a > 40 and phi < 35: # checking if it is real parkingspot
+            if a > 40 and phi < 45: # checking if it is real parkingspot
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
 
@@ -418,8 +424,8 @@ class Navigation:
         """
         orient: "x" Spot liegt entlang x (y ist fix)
                 "y" Spot liegt entlang y (x ist fix)
-        line_value: bei "x" ist es y_fix (z.B. 200)
-                    bei "y" ist es x_fix (z.B. 900 oder -100)
+        line_value: bei "x" ist es y_fix also 200
+                    bei "y" ist es x_fix (900 oder -100)
         """
         dx = abs(spot.x2 - spot.x1)
         dy = abs(spot.y2 - spot.y1)

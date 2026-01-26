@@ -11,12 +11,7 @@ from pololu_3pi_2040_robot import motors
 from navigation import Pose
 from math import pi
 
-# For debugging -----------------
-from machine import Pin, UART
-uart = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
-
-
-
+# speed for setup maneuvers
 SETUP_SPEED = 600
 
 
@@ -26,9 +21,6 @@ class GuidanceState:
     SETUP = "setup"
     SCOUT = "scout"
     PARKING = "parking"
-    EXTERNAL = "external"
-
-
 ## Enum for the states of the setup submachine.
 class GuidanceSetupState:
     RIGHT1 = 1
@@ -39,7 +31,6 @@ class GuidanceSetupState:
 ## Enum for the states of the parking submachine.
 class GuidanceParkingState:
     APPROACH = "approach"
-    ALIGN = "align"
     PARK = "park"
     HOLD = "hold"
     LEAVE = "leave"
@@ -66,9 +57,6 @@ class GuidanceStateMachine:
         self.navigation = nav
         self.control = con
         self.com = com
-        # example of making bindings on runtime, for the general keymap see main.py
-        self.com.bind(lambda: self.request_state(GuidanceState.SETUP), "c")
-        self.com.bind(lambda: self.navigation.reset(), "l")
 
     ## Initiate the parking maneuver.
     #
@@ -76,9 +64,7 @@ class GuidanceStateMachine:
     # This should be used as a callback by the communication module bound to "3".
     def start_parking(self):
         """start the parking maneuver by receiving the user-selected spot and enabling the respective Guidance state"""
-        id = self.com.receive_target_spot()
-        # todo students: request suitable GuidanceState here, process the id ...
-        
+        id = self.com.receive_target_spot()        
         if self.current_parking_state == None or self.current_parking_state in (GuidanceParkingState.APPROACH, GuidanceParkingState.PARK): #only when not already parking
             self.request_state(GuidanceState.PARKING)
             spots = self.navigation.get_parking_spots()
@@ -229,9 +215,8 @@ class GuidanceStateMachine:
 
                 # nominal action
                 self.control.run()
-                #self.display.text_line("anfahren", 1)
 
-                #exit action (nur beim Übergang in anderen Unterzustand)
+                #exit action 
                 if self.near(self.navigation.get_pose().x, self.start_pose.x, 5) and self.near(self.navigation.get_pose().y, self.start_pose.y, 5):   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
@@ -254,7 +239,6 @@ class GuidanceStateMachine:
                     self.control.path_follower.set_points(s_pose, e_pose)
                     self.control.set_mode(ControlMode.Path)
                 
-                #self.display.text_line("einparken", 1)
                 if self.control.run(): # nominal action, returns true if path is completed
                     #exit action
                     self.control.set_mode(ControlMode.Inactive)

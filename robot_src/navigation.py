@@ -1,10 +1,16 @@
 ## @package navigation
 #
-# REMOVED ist hier der Chef
+#
+#
+# Gruppe HSAMR01
+# REMOVED 
+# Matrikel-Nr.: REMOVED
+#
+#
 # Module to implement localization of the robot and parking spot detection.
 
 # for communication
-from machine import Pin, UART
+# from machine import Pin, UART
 
 
 from math import sin, cos, atan2, sqrt, pi
@@ -139,7 +145,7 @@ class Navigation:
         self.axis_lock_enabled = True #Variable zur Aktivierung/Deaktivierung der festen Koordinatenachsen
         self.set_angle_at_corner = True #Variable zur Aktivierung/Deaktivierung der Winkelaktualisierung an den Ecken
         #Kommunikation (Test)
-        self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
+        # self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key

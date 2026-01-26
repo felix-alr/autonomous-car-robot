@@ -25,6 +25,14 @@ RAD_TO_DEG = 180.0 / pi
 DEG_TO_RAD = pi / 180.0
 
 
+CORNER_DISTANCE_THRESHOLD = 30
+
+FILTER_MIN_DIST = 40 # minimal distance between start and end pose of parkingspot
+FILTER_MAX_ANGLE = 45 # maximal angle betwenn start and end pose of parkingspot
+
+THRESHOLD_DISTANCE_SENSOR = 100 #Threshold for detecting Parkingspot
+
+
 ## Struct representing the robot pose.
 #
 # The pose consists of a position in x-y-coordinates in mm and
@@ -139,6 +147,9 @@ class Navigation:
         self.parking_spot_size = 210    # Parkplatzgröße entscheidet über Eignung der Parklücke zum parken
         self.per = per
         self.has_flag = False
+
+        self.rc_old = 0
+        self.lc_old = 0
         
         self.pose = Pose()
         self.corner_correction_enabled = True   #Variable zur Aktivierung/Deaktivierung von Eckenerkennung (für Setup)
@@ -178,8 +189,14 @@ class Navigation:
             Pose(0,600,270),
             ]
          
+<<<<<<< HEAD
         self.closest_line = self.parcours[0] #Initialisierung der Variable 'closest_line' mit dem Eintrag [0] des parcours Array 
         self.idx = -1   # Index zum zählen der Ecken
+=======
+        self.closest_line = self.parcours[0]
+        self.idx = -1
+        self.dist = float('inf')
+>>>>>>> feature/odometry
 
     ## Return a map of the parcours.
     #
@@ -198,6 +215,7 @@ class Navigation:
     def update(self):
         self.pose_filter.update()
         self.update_pose_distance()
+
         # including flag for corners
         if not self.corner_correction_enabled:
         # im Setup: weder Corner noch Parklücken-Scan
@@ -207,22 +225,24 @@ class Navigation:
             self.has_flag = True
             #self.uart.write("Ecke erkannt")
             # finding closest point to current position
-            self.closest_point, self.idx = self.find_closest_point()
+            self.closest_point, self.idx, self.dist = self.find_closest_point()
             # find closest line from closest point
             self.closest_line = self.parcours[self.idx]
             # set x,y to closest corner
-            self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
+            if self.dist < CORNER_DISTANCE_THRESHOLD:
+                self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
             #self.uart.write(f"{self.idx}")
         #   resets the has_flag variabled
         if self.per.get_corner() == False and self.has_flag == True:
             #self.uart.write("Ecke vorbei")
+            if self.dist < CORNER_DISTANCE_THRESHOLD:
             # set phi to target-angle when corner is over
-            if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
-                self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
-                #self.uart.write(f"Winkel wird nicht gesetzt")
-            else:
-                self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
-                #self.uart.write(f"Winkel gesetzt")
+                if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
+                    self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
+                    #self.uart.write(f"Winkel wird nicht gesetzt")
+                else:
+                    self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
+                    #self.uart.write(f"Winkel gesetzt")
             self.has_flag = False
 
         if self.axis_lock_enabled == True:
@@ -255,7 +275,7 @@ class Navigation:
                 min_dist = dist
                 closest_point = element
                 closest_idx = idx
-        return closest_point, closest_idx
+        return closest_point, closest_idx, min_dist
 
     def update_pose_distance(self):
         d = self.per.get_distance()
@@ -326,19 +346,23 @@ class Navigation:
         self.d = self.per.get_distance()
         if self.d is None:
             return
-        if self.d > 100 and self.has_parkingspot == False: #Trigger for start_pose
+        if self.d > THRESHOLD_DISTANCE_SENSOR and self.has_parkingspot == False: #Trigger for start_pose
             self.has_parkingspot = True
             sx, sy = self.shift_along_heading(self.pose, 16)
             self.pose_start = Pose(sx, sy, self.pose.phi) # safe start pose 
         
-        if self.d <= 100 and self.has_parkingspot == True: # Trigger for end_pose
+        if self.d <= THRESHOLD_DISTANCE_SENSOR and self.has_parkingspot == True: # Trigger for end_pose
             self.has_parkingspot = False 
             sx, sy = self.shift_along_heading(self.pose, 16)
             self.pose_end = Pose(sx, sy, self.pose.phi)   # safe end pose 
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
             phi = self.angle_diff_deg(self.pose_start.phi, self.pose_end.phi)   # calculating angle between two points to filter out the corners
 
+<<<<<<< HEAD
             if a > 40 and phi < 45: # checking if it is real parkingspot
+=======
+            if a > FILTER_MIN_DIST and phi < FILTER_MAX_ANGLE: # checking if it is real parkingspot
+>>>>>>> feature/odometry
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
 

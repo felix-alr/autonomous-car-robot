@@ -22,7 +22,7 @@ try:
     import control_test
 
     ## time for one execution cycle
-    SAMPLETIME = 50000  # in microseconds (us)
+    SAMPLETIME = 30000  # in microseconds (us)
 
     _gui_run_fp = None # eventually hold the original gui.run func
 

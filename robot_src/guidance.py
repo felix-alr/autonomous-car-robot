@@ -123,7 +123,7 @@ class GuidanceStateMachine:
         # update other modules
         self.perception.update()
         self.navigation.update()
-        #self.show_current_state()
+        self.show_current_state()
         # run the communicator
         self.com.run()
         # leave parking using scout button

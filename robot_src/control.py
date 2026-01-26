@@ -42,7 +42,7 @@ class ModeController:
         self.line_follower = LineFollower(self._motors, perception)
         self.kinematic_controller = KinematicController(self._motors, self._perception)
         self.path_follower = PathFollower(self.kinematic_controller, self._navigation)
-        self.position_controller = PositionController(self._perception,self._navigation,self.kinematic_controller)
+        self.position_controller = PositionController(self._navigation,self.kinematic_controller)
 
 
     ## Select a specific control algorithm.
@@ -84,14 +84,14 @@ class LineFollower:
         #kp: if langsmam + si oscila -
         #kd: if jitters - if overshoot +
 
-        self.kp = 0.005 - (3*0.0005)   -(3*0.0001)      #0.0032                                    #3
-        self.kd = 0.00025+(1*0.00005)    -   (0*0.00001)       # 0.0003                             #5
+        self.kp = 0.0042      #0.0032   # 0.0042                                
+        self.kd = 0.000275       # 0.0003    #0.000275               
 
         self.dt = 0.05
         self.prev_e = 0
 
         # Base forward PWM
-        self.duty_cycle = 0.13
+        self.duty_cycle = 0.14
         self.v0 = 6000 * self.duty_cycle  # PWM
         self.ctrl = 0
 
@@ -448,22 +448,17 @@ class PathFollower:
 ##Seguir tuneando kv y kt y buscar como justificar uso de ctrl hiperbolico
 ## Controller implementing a position control algorithm.
 class PositionController:
-    def __init__(self, perception, navigation, kin_controler):
-        self.target = (200,0)#aqui hardcordear target para pruebas
+    def __init__(self, navigation, kin_controler):
+        self.target = (350,250)#aqui hardcordear target para pruebas
         self.nav = navigation
-
-        self.per = perception
         self.kin = kin_controler
+        
 
-        #self.kv = 1.25        #gain controller
-        #self.kt = 0.9         #gain controller
+        #Proportional 
+        self.kv = 1.6        #gain v controller
+        self.kt = 1.5         #gain w controller
 
-        #Proportional
-        self.kv = 1.5        #gain controller
-        self.kt = 0.9         #gain controller
-
-        self.thresh = 2.0       #en mm
-
+        self.thresh = 5.0       #en mm
 
 
     ## Set target position with x and y coordinate.
@@ -472,7 +467,7 @@ class PositionController:
 
     def run(self):
         x, y = self.nav.get_position()
-        phi = self.nav.get_pose().phi #in rad
+        phi = (self.nav.get_pose().phi)*math.pi/180 #in rad
 
         xd, yd = self.target
 
@@ -490,16 +485,13 @@ class PositionController:
         ephi = phi_des - phi
         ephi = math.atan2(math.sin(ephi), math.cos(ephi))
 
-    #Control proporcional
-     #   v = dist*self.kv
-     #   w = self.kt*ephi
+    #Proportional ctrl
+        v = dist*self.kv 
+        w = self.kt*ephi
 
-        vmax = 250        #mm/s
-        wmax = math.pi/2      #rad/s
-
-    #Control hiperbolico, just test jeje
-        v = vmax*math.tanh((self.kv*dist)/vmax)
-        w = wmax*math.tanh((self.kt*ephi)/wmax)*-1
+        #Safe clipping
+        v = min(v, 300) #300 mm/s as max vel
+        w = min(w, math.pi/2) #pi/2 rad/s as max angular vel
 
         #v (mm/s) w(rad/s)
         self.kin.set_vw(v,w)

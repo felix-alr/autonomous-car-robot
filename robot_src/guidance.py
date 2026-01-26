@@ -190,8 +190,6 @@ class GuidanceStateMachine:
                     self._motors.set_speeds(0, 0)
                     self.current_setup_state = GuidanceSetupState.DONE
             
-            self.display.clear() # funktioniert nicht
-            
             if self.current_setup_state == GuidanceSetupState.DONE:
                 self.request_state(GuidanceState.IDLE)
 
@@ -199,6 +197,7 @@ class GuidanceStateMachine:
                 # exit action
                 self.control.set_mode(ControlMode.Inactive)
                 self.control.run()
+                self.display.clear()
 
         elif self.current_state == GuidanceState.SCOUT:
             if self.current_state != self.last_state:
@@ -267,10 +266,6 @@ class GuidanceStateMachine:
             if self.current_parking_state == GuidanceParkingState.HOLD:
                 if self.current_parking_state != self.last_parking_state:
                     #entry action
-                    self.navigation.axis_lock_enabled = False
-                    self.navigation.corner_correction_enabled = False
-                    self.navigation.set_angle_at_corner = False
-                    #self.display.text_line("halten", 1)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.HOLD
@@ -279,10 +274,6 @@ class GuidanceStateMachine:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
                     #Übergabe der Start- und Endpose an den PathFollower
-                    self.navigation.axis_lock_enabled = False
-                    self.navigation.corner_correction_enabled = False
-                    self.navigation.set_angle_at_corner = False
-                    #self.display.text_line("ausparken", 1)
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0] #converting degrees to radians

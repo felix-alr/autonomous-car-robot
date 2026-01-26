@@ -1,5 +1,5 @@
 ## @package guidance
-#
+# Author: REMOVED, Matrikelnummer: REMOVED
 # Module containing the state machines to orchestrate the other modules, so the robot fulfills its tasks.
 from perception import Perception
 from control import ModeController, ControlMode
@@ -17,12 +17,30 @@ SETUP_SPEED = 600
 
 ## Enum for states of the main state machine.
 class GuidanceState:
+    """
+    Enumeration class for the main guidance state machine states.
+    
+    Attributes:
+        IDLE (str): Robot is idle and waiting for input.
+        SETUP (str): Robot is in setup state.
+        SCOUT (str): Robot is scouting for parking spots.
+        PARKING (str): Robot is executing parking maneuver.
+    """
     IDLE = "idle"
     SETUP = "setup"
     SCOUT = "scout"
     PARKING = "parking"
 ## Enum for the states of the setup submachine.
 class GuidanceSetupState:
+    """
+    Enumeration class for the setup submachine states.
+    
+    Attributes:
+        RIGHT1 (int): First right turn during setup calibration.
+        LEFT (int): Left turn during setup calibration.
+        RIGHT2 (int): Second right turn during setup calibration.
+        DONE (int): Setup calibration is complete.
+    """
     RIGHT1 = 1
     LEFT = 2
     RIGHT2 = 3
@@ -30,6 +48,15 @@ class GuidanceSetupState:
 
 ## Enum for the states of the parking submachine.
 class GuidanceParkingState:
+    """
+    Enumeration class for the parking submachine states.
+    
+    Attributes:
+        APPROACH (str): Robot is approaching the parking spot.
+        PARK (str): Robot is executing the parking maneuver.
+        HOLD (str): Robot is parked and holding position.
+        LEAVE (str): Robot is leaving the parking spot.
+    """
     APPROACH = "approach"
     PARK = "park"
     HOLD = "hold"
@@ -37,7 +64,41 @@ class GuidanceParkingState:
 
 ## Main state machine for operating the robot.
 class GuidanceStateMachine:
+    """
+    Main state machine for orchestrating the robot's behavior.
+    
+    This class manages the overall state transitions and behavior of the robot, including
+    setup, scouting for parking spots, and parking maneuvers.
+    It coordinates with perception, navigation, control, and communication modules.
+    
+    Attributes:
+        current_state (str): Current state of the main state machine.
+        last_state (str): Previous state of the main state machine.
+        requested_state (str): Next requested state to transition to.
+        current_setup_state (int): Current state within the setup submachine.
+        last_setup_state (int): Previous state within the setup submachine.
+        current_parking_state (str): Current state within the parking submachine.
+        last_parking_state (str): Previous state within the parking submachine.
+        parking_spots (list): List of detected parking spots.
+        current_parking_spot (ParkingSpot): Target parking spot for current maneuver.
+        start_pose (Pose): Start pose for parking maneuver.
+        end_pose (Pose): End pose for parking maneuver.
+        display (Display): Display interface for showing status information.
+        perception (Perception): Perception module instance.
+        navigation (Navigation): Navigation module instance.
+        control (ModeController): Control module instance.
+        com (Communicator): Communication module instance.
+    """
     def __init__(self, per: Perception, nav: Navigation, con: ModeController, com: Communicator):
+        """
+        Initialize the Guidance State Machine.
+        
+        Args:
+            per (Perception): Perception module 
+            nav (Navigation): Navigation module 
+            con (ModeController): Control module 
+            com (Communicator): Communication module 
+        """
         self.current_state = GuidanceState.IDLE
         self.last_state = None
         self.requested_state = None
@@ -58,12 +119,15 @@ class GuidanceStateMachine:
         self.control = con
         self.com = com
 
-    ## Initiate the parking maneuver.
-    #
-    # Start the parking maneuver by receiving the user-selected target spot and enabling the appropriate state.
-    # This should be used as a callback by the communication module bound to "3".
     def start_parking(self):
-        """start the parking maneuver by receiving the user-selected spot and enabling the respective Guidance state"""
+        """
+        Initiate the parking maneuver.
+        
+        Receives the user-selected target parking spot from the communication module
+        and transitions the state machine to the PARKING state.
+        
+        This method should be used as a callback bound to the communication module.
+        """
         id = self.com.receive_target_spot()        
         if self.current_parking_state == None or self.current_parking_state in (GuidanceParkingState.APPROACH, GuidanceParkingState.PARK): #only when not already parking
             self.request_state(GuidanceState.PARKING)
@@ -72,6 +136,12 @@ class GuidanceStateMachine:
 
     ## Generate start and end poses for the parking maneuver.
     def generate_parking_path(self):
+        """
+        Generate start and end poses for the parking path.
+        
+        Calculates the appropriate start and end poses based on the orientation of the
+        current parking spot.
+        """
         spot = self.current_parking_spot
 
         x1 = spot.x1
@@ -92,20 +162,46 @@ class GuidanceStateMachine:
 
     ## Support function for tolerance in position checking.
     def near(self, a, b, tolerance):
+        """
+        Check if two values are within a specified tolerance.
+        
+        Args:
+            a (float): First value to compare.
+            b (float): Second value to compare.
+            tolerance (float): Maximum allowed absolute difference.
+            
+        Returns:
+            bool: True if the absolute difference is less than tolerance, False otherwise.
+        """
         return abs(a - b) < tolerance
 
     ## Request the state of next execution.
     def request_state(self, state: GuidanceState):
+        """
+        Request a state transition for the next execution cycle.
+        
+        Args:
+            state (str): The GuidanceState to transition to.
+        """
         self.requested_state = state
             
 
     ## Helper to print the state of current execution on the display.
     def show_current_state(self):
+        """
+        Display the current state on the robot's display.
+        """
         self.display.text_line(self.current_state, 0)
         self.display.show()
 
     ## Execute the main state machine.
     def run(self):
+        """
+        Execute one cycle of the main state machine.
+        
+        Updates all modules (perception, navigation), processes communications,
+        and executes the current state's logic.
+        """
         # update other modules
         self.perception.update()
         self.navigation.update()
@@ -134,7 +230,7 @@ class GuidanceStateMachine:
         elif self.current_state == GuidanceState.SETUP:
             if self.current_state != self.last_state:
                 # entry action
-                self.navigation.corner_correction_enabled = False   #Eckenerkennung muss deaktiviert bleiben
+                self.navigation.corner_correction_enabled = False   #Corner detection must remain disabled
                 self.current_setup_state = GuidanceSetupState.RIGHT1
                 self.last_setup_state = None
                 self._motors = motors.Motors()
@@ -188,11 +284,11 @@ class GuidanceStateMachine:
         elif self.current_state == GuidanceState.SCOUT:
             if self.current_state != self.last_state:
                 # entry action
-                self.navigation.axis_lock_enabled = True # axis lock nach Parken wieder einschalten
-                self.navigation.corner_correction_enabled = True    #Eckenerkennung darf aktiviert werden
-                self.navigation.set_angle_at_corner = True #"Winkel an Ecken setzen" nach Parken wieder aktivieren
+                self.navigation.axis_lock_enabled = True # re-enable axis lock after parking
+                self.navigation.corner_correction_enabled = True    #Corner detection can be enabled
+                self.navigation.set_angle_at_corner = True #Re-enable "set angle at corners" after parking
                 self.control.set_mode(ControlMode.Line)
-                self.current_parking_state = GuidanceParkingState.APPROACH #Damit der Roboter nach der Parklückensuche beim Übergang in den Zustand parking immer erstmal die Parklücke anfährt
+                self.current_parking_state = GuidanceParkingState.APPROACH #Ensures robot approaches parking spot first after scouting
             # nominal action
             self.control.run()
 
@@ -204,25 +300,25 @@ class GuidanceStateMachine:
         elif self.current_state == GuidanceState.PARKING:
             if self.current_state != self.last_state:
                 # entry action
-                self.generate_parking_path() #Pfadrandposen berechnen
+                self.generate_parking_path() #Calculate path boundary poses
             # nominal action: run submachine
             # anfahren
             if self.current_parking_state == GuidanceParkingState.APPROACH:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
-                    self.navigation.set_angle_at_corner = False # beim Anfahren den Winkel nicht zurücksetzen
+                    self.navigation.set_angle_at_corner = False # Do not reset angle when approaching
                     self.control.set_mode(ControlMode.Line)
 
                 # nominal action
                 self.control.run()
 
                 #exit action 
-                if self.near(self.navigation.get_pose().x, self.start_pose.x, 5) and self.near(self.navigation.get_pose().y, self.start_pose.y, 5):   #Prüfen, ob sich Roboter auf Startposition befindet mit Toleranz von 5 mm   
+                if self.near(self.navigation.get_pose().x, self.start_pose.x, 5) and self.near(self.navigation.get_pose().y, self.start_pose.y, 5):   #Check if robot is at start position with tolerance of 5 mm   
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = self.current_parking_state
                     self.current_parking_state = GuidanceParkingState.PARK
-            # einparken
+            # parking
             if self.current_parking_state == GuidanceParkingState.PARK:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
@@ -230,7 +326,7 @@ class GuidanceStateMachine:
                     self.navigation.axis_lock_enabled = False
                     self.navigation.corner_correction_enabled = False
                     self.navigation.set_angle_at_corner = False
-                    #Übergabe der Start- und Endpose an den PathFollower
+                    #Pass start and end poses to PathFollower
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0] #converting degrees to radians
@@ -246,18 +342,18 @@ class GuidanceStateMachine:
                     self.control.path_follower.reset()
                     self.last_parking_state = self.current_parking_state
                     self.current_parking_state = GuidanceParkingState.HOLD
-            # halten
+            # hold
             if self.current_parking_state == GuidanceParkingState.HOLD:
                 if self.current_parking_state != self.last_parking_state:
                     #entry action
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
                     self.last_parking_state = GuidanceParkingState.HOLD
-            # verlassen
+            # leaving
             if self.current_parking_state == GuidanceParkingState.LEAVE:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action
-                    #Übergabe der Start- und Endpose an den PathFollower
+                    # Pass start and end poses to PathFollower
                     s = self.start_pose
                     e = self.end_pose
                     s_pose = [s.x, s.y, s.phi * pi / 180.0] #converting degrees to radians
@@ -272,7 +368,7 @@ class GuidanceStateMachine:
                     self.request_state(GuidanceState.SCOUT)
                     self.control.set_mode(ControlMode.Inactive)
                     self.control.run()
-                    self.control.path_follower.reset() #Um Regler für nächsten Parkvorgang zurückzusetzen
+                    self.control.path_follower.reset() #Reset controller for next parking maneuver
                     self.last_parking_state = self.current_parking_state
                     self.current_parking_state = None
 

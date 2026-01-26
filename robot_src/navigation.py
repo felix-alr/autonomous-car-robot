@@ -32,6 +32,8 @@ FILTER_MAX_ANGLE = 45 # maximal angle betwenn start and end pose of parkingspot
 
 THRESHOLD_DISTANCE_SENSOR = 100 #Threshold for detecting Parkingspot
 
+PARKING_SPOT_SIZE = 200 # Parkplatzgröße entscheidet über Eignung der Parklücke zum parken
+
 
 ## Struct representing the robot pose.
 #
@@ -144,7 +146,7 @@ class ParkingSpot:
 class Navigation:
     def __init__(self, per: Perception):
         self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
-        self.parking_spot_size = 210    # Parkplatzgröße entscheidet über Eignung der Parklücke zum parken
+            # Parkplatzgröße entscheidet über Eignung der Parklücke zum parken
         self.per = per
         self.has_flag = False
 
@@ -189,14 +191,9 @@ class Navigation:
             Pose(0,600,270),
             ]
          
-<<<<<<< HEAD
-        self.closest_line = self.parcours[0] #Initialisierung der Variable 'closest_line' mit dem Eintrag [0] des parcours Array 
-        self.idx = -1   # Index zum zählen der Ecken
-=======
         self.closest_line = self.parcours[0]
         self.idx = -1
         self.dist = float('inf')
->>>>>>> feature/odometry
 
     ## Return a map of the parcours.
     #
@@ -358,11 +355,7 @@ class Navigation:
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
             phi = self.angle_diff_deg(self.pose_start.phi, self.pose_end.phi)   # calculating angle between two points to filter out the corners
 
-<<<<<<< HEAD
-            if a > 40 and phi < 45: # checking if it is real parkingspot
-=======
             if a > FILTER_MIN_DIST and phi < FILTER_MAX_ANGLE: # checking if it is real parkingspot
->>>>>>> feature/odometry
 
                 if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
 
@@ -374,7 +367,7 @@ class Navigation:
                         self.pose_start.y = 200 # sets the y-value to a fixed preset value (line on map)
                         self.pose_end.y = 200
 
-                    if abs(self.pose_start.x - self.pose_end.x)> self.parking_spot_size:    #checking if parking-spot is big enough 
+                    if abs(self.pose_start.x - self.pose_end.x)> PARKING_SPOT_SIZE:    #checking if parking-spot is big enough 
                         self.has_size = True    
                     else: 
                         self.has_size = False
@@ -388,7 +381,7 @@ class Navigation:
                         self.pose_start.x = -100    # set the x-value to a fixed preset value (line on map)
                         self.pose_end.x = -100    
 
-                    if abs(self.pose_start.y - self.pose_end.y) > self.parking_spot_size:   #checking if parking spot is big enough
+                    if abs(self.pose_start.y - self.pose_end.y) > PARKING_SPOT_SIZE:   #checking if parking spot is big enough
                         self.has_size = True
                     else:
                         self.has_size = False

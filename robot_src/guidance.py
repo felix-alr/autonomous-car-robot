@@ -78,9 +78,10 @@ class GuidanceStateMachine:
         """start the parking maneuver by receiving the user-selected spot and enabling the respective Guidance state"""
         id = self.com.receive_target_spot()
         # todo students: request suitable GuidanceState here, process the id ...
-        self.request_state(GuidanceState.PARKING)
-        spots = self.navigation.get_parking_spots()
-        if self.current_parking_state == None or self.current_parking_state == GuidanceParkingState.APPROACH: #only when not already parking
+        
+        if self.current_parking_state == None or self.current_parking_state in (GuidanceParkingState.APPROACH, GuidanceParkingState.PARK): #only when not already parking
+            self.request_state(GuidanceState.PARKING)
+            spots = self.navigation.get_parking_spots()
             self.current_parking_spot = spots[id]
 
     ## Generate start and end poses for the parking maneuver.
@@ -94,8 +95,8 @@ class GuidanceStateMachine:
 
         if x1 == x2:
             if y1 > y2:
-                self.start_pose = Pose(x1+ 100, y1 - 50, -90)
-                self.end_pose = Pose(x1 - 80, y1 - 150, -90)
+                self.start_pose = Pose(x1+ 100, y1 - 50, 270)
+                self.end_pose = Pose(x1 - 80, y1 - 150, 270)
             else:
                 self.start_pose = Pose(x1 - 100, y1 + 50, 90)
                 self.end_pose = Pose(x1 + 80, y1 + 150, 90)
@@ -126,7 +127,7 @@ class GuidanceStateMachine:
         # run the communicator
         self.com.run()
         # leave parking using scout button
-        if self.current_state == GuidanceState.SCOUT and self.current_parking_state in (GuidanceParkingState.HOLD, GuidanceParkingState.LEAVE):
+        if self.current_state == GuidanceState.SCOUT and self.current_parking_state in (GuidanceParkingState.PARK, GuidanceParkingState.HOLD, GuidanceParkingState.LEAVE):
             self.current_state = GuidanceState.PARKING
             self.last_parking_state = self.current_parking_state
             self.current_parking_state = GuidanceParkingState.LEAVE
@@ -189,7 +190,7 @@ class GuidanceStateMachine:
                     self._motors.set_speeds(0, 0)
                     self.current_setup_state = GuidanceSetupState.DONE
             
-            self.display.clear # funktioniert nicht
+            self.display.clear() # funktioniert nicht
             
             if self.current_setup_state == GuidanceSetupState.DONE:
                 self.request_state(GuidanceState.IDLE)

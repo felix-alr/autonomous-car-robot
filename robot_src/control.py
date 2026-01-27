@@ -1,3 +1,14 @@
+"""""
+Gruppe HSAMR01
+Control A
+- REMOVED
+- Matrikel-Nr. REMOVED
+
+Control B
+- REMOVED
+- Matrikel-Nr. REMOVED
+"""""
+
 ## @package control
 #
 # Module containing the general modal controller and specific control algorithms
@@ -84,8 +95,8 @@ class LineFollower:
         #kp: if langsmam + si oscila -
         #kd: if jitters - if overshoot +
 
-        self.kp = 0.0042      #0.0032   # 0.0042                                
-        self.kd = 0.000275       # 0.0003    #0.000275               
+        self.kp = 0.0042      #0.0032   # 0.0042                      
+        self.kd = 0.000275       # 0.0003    #0.000275      
 
         self.dt = 0.05
         self.prev_e = 0
@@ -445,11 +456,10 @@ class PathFollower:
         return dt
 
 
-##Seguir tuneando kv y kt y buscar como justificar uso de ctrl hiperbolico
 ## Controller implementing a position control algorithm.
 class PositionController:
     def __init__(self, navigation, kin_controler):
-        self.target = (350,250)#aqui hardcordear target para pruebas
+        self.target = (450,250)#Target hardcoding for tryouts
         self.nav = navigation
         self.kin = kin_controler
         
@@ -458,7 +468,7 @@ class PositionController:
         self.kv = 1.6        #gain v controller
         self.kt = 1.5         #gain w controller
 
-        self.thresh = 5.0       #en mm
+        self.thresh = 5.0       #in mm
 
 
     ## Set target position with x and y coordinate.

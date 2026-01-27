@@ -125,7 +125,7 @@ class Line:
 #
 # The coordinates should define corners of the rectangle representing the parking spot.
 class ParkingSpot:
-    def __init__(self, x1: int, y1: int, x2: int, y2: int, suitable_for_parking: bool):
+    def __init__(self, x1: int, y1: int, x2: int, y2: int, suitable_for_parking: bool, region: int ):
         """create ParkingSpot object
 
         Args:
@@ -134,12 +134,14 @@ class ParkingSpot:
             x2 (int): x2-coordinate in mm
             y2 (int): y2-coordinate in mm
             suitable_for_parking (bool): suitability
+            region(int): region of parkingspot can be 1, 2 or 3
         """
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
         self.y2 = y2
         self.suitable_for_parking = suitable_for_parking
+        self.region = region
 
 
 ## Class implementing all of the navigation functionality.
@@ -357,11 +359,13 @@ class Navigation:
 
             if a > FILTER_MIN_DIST and phi < FILTER_MAX_ANGLE: # checking if it is real parkingspot
 
-                if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
+                if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side (Bereich 1)
 
                     # Filter out false parking spots caused by sensor noise
                     if 280 < self.pose_start.x < 380:
                         return
+                    
+                    region = 1
 
                     if self.pose_start.x - self.pose_end.x < 0:
                         self.pose_start.y = 200 # sets the y-value to a fixed preset value (line on map)
@@ -372,12 +376,14 @@ class Navigation:
                     else: 
                         self.has_size = False
 
-                if abs(self.pose_start.x - self.pose_end.x) < abs(self.pose_start.y - self.pose_end.y): #checking if parking spot is on the y side (right or left)
-                    if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map
+                if abs(self.pose_start.x - self.pose_end.x) < abs(self.pose_start.y - self.pose_end.y): #checking if parking spot is on the y side (right or left) (Bereich 2 oder 3)
+                    if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map (Bereich 2)
+                        region = 2
                         self.pose_start.x = 900     # set the x-value to a fixed preset value (line on map)
                         self.pose_end.x = 900
                     
-                    if self.pose_start.y - self.pose_end.y > 0: #checking if the parking-spot is on the left side of map
+                    if self.pose_start.y - self.pose_end.y > 0: #checking if the parking-spot is on the left side of map (Bereich 3)
+                        region = 3
                         self.pose_start.x = -100    # set the x-value to a fixed preset value (line on map)
                         self.pose_end.x = -100    
 
@@ -386,32 +392,28 @@ class Navigation:
                     else:
                         self.has_size = False
                      
-                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size)    #creating new spot
+                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size, region)    #creating new spot
 
-                new_orient, new_line = self.spot_orientation_and_line(spot) #orientation and fixed value of the parking spot
+                #new_orient, new_line = self.spot_orientation_and_line(spot) #orientation and fixed value of the parking spot
 
                 self.to_delete.clear()  # clearing the array of old parking spots
 
                 # Iterate through the list of parking spots to detect overlapping spots
                 for spot_id, old_spot in list(self.parking_spots.items()):
-                    old_orient, old_line = self.spot_orientation_and_line(old_spot)
-                    # if the new spot and the old spot have different orientations, there is notthing more to compare
-                    if new_orient != old_orient:
-                        continue
-                    # old spot and new spot have the same orientation
-                    if new_orient == "x":
-                        # checking if the fixed value is the same
-                        if abs(new_line - old_line)> 1e-6:
-                            continue
+
+                    if old_spot.region == spot.region:
                         # checking if there is overlapping
-                        if self.intervals_overlap(spot.x1, spot.x2, old_spot.x1, old_spot.x2):
-                            self.to_delete.append(spot_id)
+                        if spot.region == 1:
+                            if self.intervals_overlap(spot.x1, spot.x2, old_spot.x1, old_spot.x2):
+                                self.to_delete.append(spot_id)
+                            continue  
+                        else:
+                            if self.intervals_overlap(spot.y1, spot.y2, old_spot.y1, old_spot.y2):
+                                self.to_delete.append(spot_id)
+                            continue
 
                     else:
-                        if abs(new_line - old_line)> 1e-6:
-                            continue
-                        if self.intervals_overlap(spot.y1, spot.y2, old_spot.y1, old_spot.y2):
-                            self.to_delete.append(spot_id)
+                        continue
 
                 for spot_id in self.to_delete:
                     # delete overlapping parkingspots from parking_spots
@@ -436,22 +438,9 @@ class Navigation:
         phi = pose.phi * DEG_TO_RAD
         return pose.x + math.cos(phi)*dx, pose.y + math.sin(phi)*dx
 
-
-    def spot_orientation_and_line(self, spot):
-        """
-        orient: "x" Spot liegt entlang x (y ist fix)
-                "y" Spot liegt entlang y (x ist fix)
-        line_value: bei "x" ist es y_fix also 200
-                    bei "y" ist es x_fix (900 oder -100)
-        """
-        dx = abs(spot.x2 - spot.x1)
-        dy = abs(spot.y2 - spot.y1)
-        if dx >= dy:
-            return "x", spot.y1  # y1==y2==fix
-        else:
-            return "y", spot.x1  # x1==x2==fix
-
     def intervals_overlap(self,u1, u2, v1, v2):
+        # sorting: smaller number has to be first
         lo1, hi1 = sorted((u1, u2))
         lo2, hi2 = sorted((v1, v2))
+        # returens true when intervals overlap
         return (lo1 <= hi2) and (lo2 <= hi1)

@@ -272,7 +272,7 @@ class Perception:
         ROTATIONAL_THRESHOLD_UPPER = 14 #Schwellenwerte für die Geschwindigkeitsdifferenz zwischen den Rädern
         ROTATIONAL_THRESHOLD_LOWER = 10
        
-        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz)>150):#gyroskop acceleration#geändert von 180
+        if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz)>150):#gyroskop acceleration
             self.line_pass = False
             self.mag_pass = False
 
@@ -280,14 +280,14 @@ class Perception:
             l1, l2, l3, l4, l5 = self.line_sensor.line_sensors.read_calibrated()
 
              # Linie prüfen
-            if (l1 > 200) or (l5 > 200) or ((l2 <500) and (l3 < 500) and (l4 < 500)):#hier wurde der Liniensensor hinzugefügt limit von 10 auf 50 erhöht
+            if (l1 > 200) or (l5 > 200) or ((l2 <500) and (l3 < 500) and (l4 < 500)):#hier wurde der Liniensensor hinzugefügt als Kontrolle
                 self.line_pass = True
                 #self.uart.write("Linie passiert\n")
             
             self.imu.mag.read()
             mx, my, mz = self.imu.mag.last_reading_gauss
             
-            #THRESHOLD_MAG = 0.2
+            #THRESHOLD_MAG = 0.05
             if self.last_mx is not None and self.last_my is not None:
                 dx = abs(mx - self.last_mx)
                 dy = abs(my - self.last_my)
@@ -313,13 +313,3 @@ class Perception:
 
         return self._corner_detected #alle 4 Sensoren vereint müssen gleichzeitig True sein     
 
-
-
-    def get_imu_acc_and_gyro(self):
-        self.imu.mag.read()
-
-        mx, my, mz = self.imu.mag.last_reading_raw
-        # Saubere, einfache Konsolenausgabe
-        self.uart.write(f"mx;my;mz(gauss): {mx:.3f};{my:.3f};{mz:.3f}\n")
-
-        return #mx, my, mz

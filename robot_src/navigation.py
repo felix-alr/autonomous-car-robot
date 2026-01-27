@@ -228,18 +228,16 @@ class Navigation:
             # finding closest point to current position
             self.closest_point, self.idx, self.dist = self.find_closest_point()
             # find closest line from closest point
-            self.closest_line = self.parcours[self.idx]
+            
             # set x,y to closest corner
-            self.uart.write(f"{self.dist}")
+            #self.uart.write(f"{self.dist}")
             if self.dist < CORNER_DISTANCE_THRESHOLD:
-                self.uart.write("Ecke erkannt")
-                self.uart.write(f"{self.idx}/n")
+                self.closest_line = self.parcours[self.idx]
+                #self.uart.write("Ecke erkannt \n")
+                #self.uart.write(f"{self.idx}\n")
                 self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
-            else:
-                self.uart.write("Ecke erkannt aber nicht gesetzt /n")
-                self.set_pose(self.pose.x,self.pose.y, self.pose.phi)
             #self.uart.write(f"{self.idx}")
-        #   resets the has_flag variabled
+        #   resets the has_flag variabledr
         if self.per.get_corner() == False and self.has_flag == True:
             #self.uart.write("Ecke vorbei")
             if self.dist < CORNER_DISTANCE_THRESHOLD:
@@ -250,8 +248,7 @@ class Navigation:
                 else:
                     self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
                     #self.uart.write(f"Winkel gesetzt")
-            else:
-                self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
+            #self.current_line = (self.current_line+1) % len(self.parcours)
             self.has_flag = False
 
         if self.axis_lock_enabled == True:

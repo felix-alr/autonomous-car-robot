@@ -1,5 +1,6 @@
 ## @package perception
 #REMOVED
+#HS Gruppe 01
 # Module to evaluate sensor inputs and provide necessary measurements for the other modules.
 import time
 import machine
@@ -61,7 +62,6 @@ class WheelSpeedFilter:
         self.dt= time.ticks_diff(now, self.last_time) /1000.0
         if self.dt <= 0:
             return#Abbruch, falls der Timer nicht stimmt
-        #pass
         # Differenz der Encoder counts
         self.delta_l = counts_l - self.last_counts_l
         self.delta_r = counts_r - self.last_counts_r
@@ -69,7 +69,7 @@ class WheelSpeedFilter:
         # Winkelgeschwindigkeit in rad/s berechnen
         self.omega_l = (self.delta_l / COUNTS_PER_REV) * 2 * 3.14159265 / self.dt
         self.omega_r = (self.delta_r / COUNTS_PER_REV) * 2 * 3.14159265 / self.dt
-
+        #Nur die Winkeländerung der Räder
         self.displacement_l =(self.delta_l/COUNTS_PER_REV)*2 * 3.14159265
         self.displacement_r =(self.delta_r/COUNTS_PER_REV)*2 * 3.14159265
 
@@ -81,14 +81,14 @@ class WheelSpeedFilter:
         self.last_counts_l = counts_l
         self.last_counts_r = counts_r
         self.last_time = now
-
+        #Funktion mit Rückgabe der Werte
     def get_wheel_speed_left(self):
         return self.filter_left.get_value()
-        raise NotImplementedError
+        #raise NotImplementedError
 
     def get_wheel_speed_right(self):
         return self.filter_right.get_value()
-        raise NotImplementedError
+        #raise NotImplementedError
     def get_wheel_distance_deviation(self) -> float:
         """
         Berechnet die Abweichung der zurückgelegten Strecke der beiden Räder.
@@ -102,7 +102,7 @@ class WheelSpeedFilter:
         s_l = (counts_l / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
         s_r = (counts_r / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
         
-        return s_l , s_r
+        return s_l - s_r
 
 ## Class to model a line sensor to calculate the lateral deviation from
 # the center of the line.
@@ -111,7 +111,7 @@ class PerceptionLineSensor:
         self.line_sensors = line_sensors
         self.weights =[-3000, -1000, 0,1000, 3000] # wichtung der Sensoren übergeben (Sensoren befinden sich in 1 cm und 3 cm Abstand)
         self.last_deviation =0
-
+        #Funtkion ließt die rohdaten ein
     def get_raw_data(self) -> list[int, int, int, int, int]:
         """read line sensor raw data
 
@@ -222,14 +222,9 @@ class Perception:
         self.wheel_speed_filter = WheelSpeedFilter(self.encoders)
         self.distance_sensor = DistanceSensor()
         self.imu = robot.IMU()
-        #self.csv_logger = CSVLogger("corner_log.csv", ["timestamp","left_speed","right_speed","z_angle","corner_detected"])
         self.imu.enable_default()
         self.led_corner = yellow_led.YellowLED()
-        #self._last_time_gyro = time.ticks_ms()
-        #self._integrated_z_angle = 0.0 #°
         self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
-        #self._last_corner_time = 0      # Zeitmarke für den Cooldown
-        #self._corner_cooldown = 1000   # Cooldown in ms
         self._corner_detected = False
         self.line_pass = False  
         self.mag_pass = False
@@ -240,7 +235,6 @@ class Perception:
     def update(self):
         self.wheel_speed_filter.update()
         self.get_corner()
-        #self.test_gyro_loop()
     
 
     def get_wheel_speed_left(self):
@@ -254,7 +248,7 @@ class Perception:
 
     ## Get lateral deviation from black line.
     def get_line_deviation(self) -> int:
-        # todo students: improve this method
+        # todo students: improve this method -> done
         return self.line_sensor.read_line()
 
     ## Get distance of obstacles to the right of the robot in mm.
@@ -262,38 +256,22 @@ class Perception:
         return self.distance_sensor.get_distance()
 
     ## Determine whether the robot is currently in a corner.
-    #
     # @returns True if in corner
     def get_corner(self) -> bool:
         left_speed = self.wheel_speed_filter.get_wheel_speed_left()
         right_speed= self.wheel_speed_filter.get_wheel_speed_right()
         self.imu.read()
-        #l1, l2, l3, l4 ,l5 = self.line_sensor.line_sensors.read_calibrated()
+
 
         #hier wird die Geschwindigkeitsdifferenz zwischen den Rädern berechnet
-        #SPEED_DIFF_THRESHOLD = 1.0 # eigentlich 2
         speed_diff = abs(left_speed - right_speed)
-        #wheel_turning = speed_diff > SPEED_DIFF_THRESHOLD
-
-        #now = time.ticks_ms()
-        #dt = time.ticks_diff(now, self._last_time_gyro)/1000
-        #self._last_time_gyro = now
 
         self.imu.gyro.read()
         gz = self.imu.gyro.last_reading_dps[2] # Z-Achse
 
-        #self._integrated_z_angle += gz * dt #° zuletzt auskommentiert
-
-        #self.uart.write(f"diff speed: {speed_diff}\n")
-
-        ROTATIONAL_THRESHOLD_UPPER = 14 #  Änderung zwischen zwei messungen erwartet
+        ROTATIONAL_THRESHOLD_UPPER = 14 #Schwellenwerte für die Geschwindigkeitsdifferenz zwischen den Rädern
         ROTATIONAL_THRESHOLD_LOWER = 10
-        #corner_detected = wheel_turning and abs(self._integrated_z_angle) >= ROTATIONAL_THRESHOLD_UPPER
-        #if (l1 > 10 or l2 > 10) or (l4 > 10 or l5 > 10):#hier soll er erkennen ob auf der linken oder rechten seite ein Sensor die Linie überfährt und falls, das passiert den wert line_pass auf True setzen
-         #   self.line_pass = True
-          #  return self.line_pass
-
-
+       
         if (not self._corner_detected) and abs(speed_diff) >= ROTATIONAL_THRESHOLD_UPPER and (abs(gz)>150):#gyroskop acceleration#geändert von 180
             self.line_pass = False
             self.mag_pass = False
@@ -302,18 +280,12 @@ class Perception:
             l1, l2, l3, l4, l5 = self.line_sensor.line_sensors.read_calibrated()
 
              # Linie prüfen
-            if (l1 > 20 or l2 > 20) or (l4 > 20 or l5 > 20):#hier wurde der Liniensensor hinzugefügt limit von 10 auf 50 erhöht
+            if (l1 > 200) or (l5 > 200) or ((l2 <500) and (l3 < 500) and (l4 < 500)):#hier wurde der Liniensensor hinzugefügt limit von 10 auf 50 erhöht
                 self.line_pass = True
                 #self.uart.write("Linie passiert\n")
             
             self.imu.mag.read()
             mx, my, mz = self.imu.mag.last_reading_gauss
-           
-           # Alte Werte initialisieren, falls noch nicht vorhanden
-            #if not hasattr(self, "last_mx"):
-             #   self.last_mx = None
-            #if not hasattr(self, "last_my"):
-             #   self.last_my = None
             
             #THRESHOLD_MAG = 0.2
             if self.last_mx is not None and self.last_my is not None:
@@ -325,105 +297,29 @@ class Perception:
 
                 # --- Alte Werte aktualisieren ---
             self.last_mx = mx
-            self.last_my = my
-
-            
+            self.last_my = my        
 
             if self.line_pass and self.mag_pass == True:
                 #self.uart.write("Jetzt  ")
                 self._corner_detected = True
 
+            # Beispiel: Sensordaten + Corner Detection
+           
         elif self._corner_detected and abs(speed_diff) <= ROTATIONAL_THRESHOLD_LOWER and (abs(gz)<100):# gyroskop acceleration
             #self.uart.write("Nicht mehr\n")
             self._corner_detected = False
             self.line_pass = False# wieder freigegeben
             self.mag_pass = False
-            #self._integrated_z_angle = 0.0
-          
-        # self._integrated_z_angle =0.0
-        return self._corner_detected# momentan bestehend aus dem Encoder und IMU(Gyro)
+
+        return self._corner_detected #alle 4 Sensoren vereint müssen gleichzeitig True sein     
 
 
-    def get_wheel_distance_deviation(self) -> float:
-        """
-        Berechnet die Abweichung der zurückgelegten Strecke der beiden Räder.
-        
-        Returns:
-            float: Abweichung in mm (positiv = linkes Rad weiter, negativ = rechtes Rad weiter)
-        """
-        counts_l, counts_r = self.encoders.get_counts()
-        
-        # Umrechnung Counts -> Strecke
-        s_l = (counts_l / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
-        s_r = (counts_r / COUNTS_PER_REV) * 2 * 3.14159265 * ROBOT_WHEEL_RADIUS
-        
-        return s_l- s_r
-    
-    def test_gyro_loop(self):
-        import time
 
-        print("Initialisiere IMU...")
-        self.imu.enable_default()   #  WICHTIG!
-        time.sleep(0.1)
-
-        print("Starte Gyroskop-Test... STRG+C zum Stoppen\n")
-
-        try:
-            while True:
-                self.imu.read()  # aktualisiert gyro, acc, mag
-
-                gx, gy, gz = self.imu.gyro.last_reading_dps
-
-                #self.uart.write("Gyro (dps) | X: {:7.2f}   Y: {:7.2f}   Z: {:7.2f}".format(
-                 #   gx, gy, gz
-                #))
-
-                time.sleep_ms(50)
-
-        except KeyboardInterrupt:
-            print("Test beendet.")
-
-
-    def test_mag_loop(self):
-        import time
-        import math
-
-        print("Initialisiere IMU...")
-        self.imu.enable_default()
-        time.sleep(0.1)
-
-        print("Starte Magnetometer-Test... STRG+C zum Stoppen\n")
-
-        try:
-            while True:
-                # Magnetometer direkt auslesen
-                self.imu.mag.read()
-                mx ,my, mz = self.imu.mag.last_reading_gauss 
-
-                # Heading berechnen
-                heading = math.degrees(math.atan2(my, mx))
-                if heading < 0:
-                    heading += 360
-
-                print(
-                    "MAG raw | X: {:7.2f}   Y: {:7.2f}   Z: {:7.2f}   Heading: {:6.1f}°"
-                    .format(mx, my, mz, heading))
-
-                time.sleep_ms(100)
-
-        except KeyboardInterrupt:
-            print("Test beendet.")
-
-    def get_heading(self):
-        import math
-        import time
+    def get_imu_acc_and_gyro(self):
         self.imu.mag.read()
-        time.sleep(0.3)
-        # Rohwerte lesen (in deiner LIS3MDL-Klasse)
-        mx, my, mz = self.imu.mag.last_reading_gauss # oder self.imu.mag.read()
-        self.uart.write(f"X= {mx} , Y= {my}")
-        heading = math.degrees(math.atan2(my, mx))
-        if heading < 0:
-            heading += 360
-        return heading
-   
+
+        mx, my, mz = self.imu.mag.last_reading_raw
+        # Saubere, einfache Konsolenausgabe
+        self.uart.write(f"mx;my;mz(gauss): {mx:.3f};{my:.3f};{mz:.3f}\n")
+
+        return #mx, my, mz

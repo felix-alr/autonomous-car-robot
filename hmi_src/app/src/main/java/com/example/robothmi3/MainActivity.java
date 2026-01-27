@@ -1,3 +1,6 @@
+// HSAR1: REMOVED
+// Matrikelnummer: REMOVED
+
 package com.example.robothmi3;
 
 import android.Manifest;

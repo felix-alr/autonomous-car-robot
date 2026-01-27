@@ -1,4 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- HSAR1: REMOVED Matrikelnummer: REMOVED -->
+
     <!-- Base application theme. -->
     <style name="Base.Theme.RobotHMI3" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->

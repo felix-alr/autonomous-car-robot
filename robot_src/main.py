@@ -2,6 +2,8 @@
 #
 # Entry point and init script
 
+# HSAR1, REMOVED, Matrikelnummer: REMOVED
+
 try:
     import time
     import sys

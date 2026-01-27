@@ -6,8 +6,6 @@
     sodass es im Java-Code referenziert und angesteuert werden kann.
 -->
 
-
-
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -102,7 +100,7 @@
             android:padding="16dp">
 
             <!-- Buttons werden zentriert ausgerichtet
-             Buttons übereinander anordnen -->
+             Buttons untereinander anordnen -->
 
             <!-- Idle-Button -->
             <Button

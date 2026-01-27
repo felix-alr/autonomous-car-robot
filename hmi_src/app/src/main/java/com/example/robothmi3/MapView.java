@@ -21,7 +21,6 @@ public class MapView extends View {
     // Listener
     private OnParkingSpotClickListener listener;
 
-
     private Paint parkingPaintSuitable;
     private Paint parkingPaintNotSuitable;
     private Paint distanceLineColor;
@@ -32,10 +31,10 @@ public class MapView extends View {
     private float robotX = 0;
     private float robotY = 0;
     private float robotPhi = 0;
-
     private float robotDx = 0;
     private float robotDy = 0;
 
+    // Offset
     public float offsetX = 250;
     public float offsetY = 775;
     public float offsetPhi = -90;
@@ -48,33 +47,37 @@ public class MapView extends View {
 
     private final Paint pathPaint;
 
+    /**
+     * MapView Wird Definiert
+     * Karte, Roboter Statisches Bild Definieren
+     * Farben Definieren
+     * @param ctx
+     * @param attrs
+     */
     public MapView(Context ctx, @Nullable AttributeSet attrs) {
         super(ctx, attrs);
 
-        // Bitmap definition
+        // Bitmap Definition
         mapBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.karte_roboter);
         robotBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.auto);
 
         // ParkingSpot-Farben definition
         parkingPaintSuitable = new Paint();
-        //parkingPaintSuitable.setColor(Color.GREEN);
         parkingPaintSuitable.setColor(Color.parseColor("#27C93F")); // Grün
         parkingPaintSuitable.setAlpha(255);
 
         parkingPaintNotSuitable = new Paint();
-        //parkingPaintNotSuitable.setColor(Color.RED);
         parkingPaintNotSuitable.setColor(Color.parseColor("#FF5F57")); // Rot
         parkingPaintNotSuitable.setAlpha(255);
 
-        // Pfad definition
+        // Pfad-Farbe Definition
         pathPaint = new Paint();
-        //pathPaint.setColor(Color.RED);
         pathPaint.setColor(Color.parseColor("#FF5F57")); // Rot
         pathPaint.setStrokeWidth(5f);
         pathPaint.setStyle(Paint.Style.STROKE);
 
+        // Distanz-Farbe Definieren
         distanceLineColor = new Paint();
-        //distanceLineColor.setColor(Color.BLUE);
         distanceLineColor.setColor(Color.parseColor("#1E6AFF")); // Blau
         distanceLineColor.setStrokeWidth(5f);
         distanceLineColor.setStyle(Paint.Style.STROKE);
@@ -82,6 +85,13 @@ public class MapView extends View {
     }
 
     @Override
+    /**
+     * Leinwand Mit Parkour Und Roboter Zeichnen
+     * Pfad Des Roboters Zeichnen: Weg-Punkte Die Empfangen Werden, Werden Mit Einer Linie Verbunden
+     * Empfangene Parklücken Zeichnen: Array Der Parklücken Durchgehen Und Rechtecke Zeichnen Mit Festgelegter Farbe Und ID
+     * Abstandsseonsor Zeichnen: Vom Roboter Weg Als Linie
+     * Bild Roboter Wird Gedreht, Skaliert Und Auf Position Akualisiert
+     */
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
@@ -97,7 +107,6 @@ public class MapView extends View {
                 canvas.drawLine(p1.x, p1.y, p2.x, p2.y, pathPaint);
             }
         }
-        //canvas.drawRect(250.0f,120.0f,585.0f,775.0f,parkingPaintSuitable);
 
         // Parklücken zeichnen
         if (!parkingSpots.isEmpty()){ //parkingSpots.size() > 0
@@ -120,7 +129,6 @@ public class MapView extends View {
         }
 
         canvas.drawLine(robotX, robotY, robotDx, robotDy, distanceLineColor);
-        //System.out.println("x1: "+robotX+" y1: "+robotY+" x2: "+robotDx+" y2: "+robotDy);
 
         // Roboter drehen + zeichnen
         canvas.save();
@@ -139,6 +147,10 @@ public class MapView extends View {
     }
 
     @Override
+    /**
+     * Touch-Eingabe Auf Dem Tablet Erkennen Und Überprüfen Ob
+     * Diese Auf Einer Parklücke War
+     */
     public boolean onTouchEvent(MotionEvent event) {
         float posX = event.getX();
         float posY = event.getY();
@@ -155,6 +167,14 @@ public class MapView extends View {
         return false;
     }
 
+    /**
+     * Wird Von onTouchEvent Aufgerufen
+     * Überpfrüfen Ob Koordinaten Der Touch-Eingabe
+     * Innerhalb einer Validen Parklücke Sind
+     * @param x : X-Koordinate Des Geklickten Spots
+     * @param y : Y-Koordinate Des Geklickten Spots
+     * @return Gefundenen ParkingSpot
+     */
     private ParkingSpot checkParkingSpot(float x, float y) {
         for (ParkingSpot parkingSpot: parkingSpots){
             if (isBetween(x, parkingSpot.x1, parkingSpot.x2) && isBetween(y, parkingSpot.y1, parkingSpot.y2)) {
@@ -167,6 +187,14 @@ public class MapView extends View {
         return null;
     }
 
+    /**
+     * Wird Von checkParkingSpot Aufgerufen
+     * Überprüft, Ob Eine Zahl Zwischen Zwei Gegebenen Grenzen Liegt
+     * @param value : Koordinate Die Gedrückt Wurde
+     * @param v1 : Start Koordinate
+     * @param v2 : End Koordinate
+     * @return Wahr Oder Falsch Das Eine Parklücke An Der Stelle Liegt
+     */
     private boolean isBetween(float value, float v1, float v2){
         if(v1 >= v2) {
             return (value < v1 && value > v2);
@@ -177,7 +205,10 @@ public class MapView extends View {
     }
 
     /**
-     * Wird von der MainActivity aufgerufen, wenn neue Positionen eintreffen.
+     * Wird Von Der MainActivity Aufgerufen, Wenn Neue Positionen Gelesen Werden.
+     * Roboter Posen Mit Dem Offset Umrechnen
+     * Pfadpunkte erstellen
+     * Karte Neuzeichnen
      */
     public void updateRobotPose(float x, float y, float phi, float dx, float dy) {
         x += offsetX;
@@ -198,7 +229,8 @@ public class MapView extends View {
         invalidate();  // View neu zeichnen
     }
     /**
-     * Wird von der MainActivity aufgerufen, wenn die ParkingSports eintreffen.
+     * Wird Von Der MainActivity Aufgerufen, Wenn Die ParkingSpots Eintreffen
+     * Karte Neuzeichnen
      */
     public void updateParkingSpots(ArrayList<ParkingSpot> parkingSpots) {
         this.parkingSpots = parkingSpots;
@@ -207,7 +239,7 @@ public class MapView extends View {
     }
 
     /**
-     * Verbindet den gefragten listener in dem Skript
+     * Verbindet Den Gefragten Listener In Dem Skript
      * @param listener
      */
     public void setOnParkingSpotClickListener(OnParkingSpotClickListener listener) {

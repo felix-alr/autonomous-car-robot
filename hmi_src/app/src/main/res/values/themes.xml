@@ -2,8 +2,9 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.RobotHMI3" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- Hintergrundfarbe -->
         <item name="colorPrimary">@color/my_light_primary</item>
+        <!-- Statusbar auf schwarz setzen -->
         <item name="android:windowLightStatusBar">true</item>
 
     </style>

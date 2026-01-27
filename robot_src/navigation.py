@@ -10,7 +10,7 @@
 # Module to implement localization of the robot and parking spot detection.
 
 # for communication
-# from machine import Pin, UART
+from machine import Pin, UART
 
 
 from math import sin, cos, atan2, sqrt, pi
@@ -25,7 +25,7 @@ RAD_TO_DEG = 180.0 / pi
 DEG_TO_RAD = pi / 180.0
 
 
-CORNER_DISTANCE_THRESHOLD = 20
+CORNER_DISTANCE_THRESHOLD = 10
 
 FILTER_MIN_DIST = 40 # minimal distance between start and end pose of parkingspot
 FILTER_MAX_ANGLE = 45 # maximal angle betwenn start and end pose of parkingspot
@@ -162,7 +162,7 @@ class Navigation:
         self.axis_lock_enabled = True #Variable zur Aktivierung/Deaktivierung der festen Koordinatenachsen
         self.set_angle_at_corner = True #Variable zur Aktivierung/Deaktivierung der Winkelaktualisierung an den Ecken
         #Kommunikation (Test)
-        # self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
+        self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))
 
         self.pose_filter = EncoderPoseFilter(self.pose, self.per.encoders)
         ## dictionary for saving the detected ParkingSpots using an int as key
@@ -230,7 +230,9 @@ class Navigation:
             # find closest line from closest point
             self.closest_line = self.parcours[self.idx]
             # set x,y to closest corner
+            self.uart.write(f"{self.dist}")
             if self.dist < CORNER_DISTANCE_THRESHOLD:
+                self.uart.write("Ecke erkannt")
                 self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
             #self.uart.write(f"{self.idx}")
         #   resets the has_flag variabled

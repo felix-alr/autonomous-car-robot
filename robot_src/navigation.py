@@ -25,7 +25,7 @@ RAD_TO_DEG = 180.0 / pi
 DEG_TO_RAD = pi / 180.0
 
 
-CORNER_DISTANCE_THRESHOLD = 10
+CORNER_DISTANCE_THRESHOLD = 45
 
 FILTER_MIN_DIST = 40 # minimal distance between start and end pose of parkingspot
 FILTER_MAX_ANGLE = 45 # maximal angle betwenn start and end pose of parkingspot
@@ -233,7 +233,11 @@ class Navigation:
             self.uart.write(f"{self.dist}")
             if self.dist < CORNER_DISTANCE_THRESHOLD:
                 self.uart.write("Ecke erkannt")
+                self.uart.write(f"{self.idx}/n")
                 self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
+            else:
+                self.uart.write("Ecke erkannt aber nicht gesetzt /n")
+                self.set_pose(self.pose.x,self.pose.y, self.pose.phi)
             #self.uart.write(f"{self.idx}")
         #   resets the has_flag variabled
         if self.per.get_corner() == False and self.has_flag == True:
@@ -246,6 +250,8 @@ class Navigation:
                 else:
                     self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
                     #self.uart.write(f"Winkel gesetzt")
+            else:
+                self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
             self.has_flag = False
 
         if self.axis_lock_enabled == True:

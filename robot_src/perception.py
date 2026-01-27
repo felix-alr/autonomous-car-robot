@@ -5,7 +5,7 @@
 import time
 import machine
 
-from machine import Pin,UART
+#from machine import Pin,UART
 from pololu_3pi_2040_robot import robot
 from pololu_3pi_2040_robot import imu
 from parameters import COUNTS_PER_REV, ROBOT_WHEEL_RADIUS
@@ -224,7 +224,7 @@ class Perception:
         self.imu = robot.IMU()
         self.imu.enable_default()
         self.led_corner = yellow_led.YellowLED()
-        self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
+        #self.uart: UART = UART(0, baudrate=115200, tx=Pin(28), rx=Pin(29))#um eine Ausgabe im Serial monitor zu haben
         self._corner_detected = False
         self.line_pass = False  
         self.mag_pass = False

@@ -302,7 +302,7 @@ class GuidanceStateMachine:
                 # entry action
                 self.generate_parking_path() #Calculate path boundary poses
             # nominal action: run submachine
-            # anfahren
+            # approaching
             if self.current_parking_state == GuidanceParkingState.APPROACH:
                 if self.current_parking_state != self.last_parking_state:
                     # entry action

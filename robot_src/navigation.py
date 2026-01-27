@@ -25,7 +25,7 @@ RAD_TO_DEG = 180.0 / pi
 DEG_TO_RAD = pi / 180.0
 
 
-CORNER_DISTANCE_THRESHOLD = 30
+CORNER_DISTANCE_THRESHOLD = 20
 
 FILTER_MIN_DIST = 40 # minimal distance between start and end pose of parkingspot
 FILTER_MAX_ANGLE = 45 # maximal angle betwenn start and end pose of parkingspot
@@ -154,6 +154,8 @@ class Navigation:
 
         self.rc_old = 0
         self.lc_old = 0
+
+        self.closest_point = Pose()
         
         self.pose = Pose()
         self.corner_correction_enabled = True   #Variable zur Aktivierung/Deaktivierung von Eckenerkennung (für Setup)
@@ -249,11 +251,17 @@ class Navigation:
             #  when x coordninate does not change 
             if self.closest_line.x_end == self.closest_line.x_start:
                 #lock x coordinate 
-                self.set_pose_no_sync(self.closest_line.x_start, self.pose.y, self.pose.phi)
+                if self.per.get_corner() == True:
+                    self.set_pose_no_sync(self.closest_line.x_start, self.pose.y, self.pose.phi)
+                else:
+                    self.set_pose_no_sync(self.closest_line.x_start, self.pose.y, self.closest_point.phi)
             # when y coordninate does not change 
             if self.closest_line.y_end == self.closest_line.y_start:
                 # lock y coordniate
-                self.set_pose_no_sync(self.pose.x, self.closest_line.y_start, self.pose.phi)
+                if self.per.get_corner() == True:
+                    self.set_pose_no_sync(self.pose.x, self.closest_line.y_start, self.pose.phi)
+                else:
+                    self.set_pose_no_sync(self.pose.x, self.closest_line.y_start, self.closest_point.phi)
            # else:
                # self.set_pose_no_sync(self.pose.x, self.pose.y, self.pose.phi)
  

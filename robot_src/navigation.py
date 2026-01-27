@@ -18,11 +18,21 @@ import time
 import math
 
 from pololu_3pi_2040_robot import robot
-from parameters import ROBOT_WHEEL_DISTANCE, ROBOT_WHEEL_RADIUS, COUNTS_PER_REV
+from parameters import ROBOT_WHEEL_DISTANCE, ROBOT_WHEEL_RADIUS, COUNTS_PER_REV, ROBOT_WHEEL_RADIUS_L, ROBOT_WHEEL_RADIUS_R
 from perception import Perception
 
 RAD_TO_DEG = 180.0 / pi
 DEG_TO_RAD = pi / 180.0
+
+
+CORNER_DISTANCE_THRESHOLD = 30
+
+FILTER_MIN_DIST = 40 # minimal distance between start and end pose of parkingspot
+FILTER_MAX_ANGLE = 45 # maximal angle betwenn start and end pose of parkingspot
+
+THRESHOLD_DISTANCE_SENSOR = 100 #Threshold for detecting Parkingspot
+
+PARKING_SPOT_SIZE = 200 # Parkplatzgröße entscheidet über Eignung der Parklücke zum parken
 
 
 ## Struct representing the robot pose.
@@ -59,7 +69,8 @@ class EncoderPoseFilter(PoseFilter):
         super().__init__(pose)
         self.encoders = encoders
         self.last_counts_left, self.last_counts_right = encoders.get_counts()
-        self.COUNTS_TO_DISTANCE = 2 * math.pi * ROBOT_WHEEL_RADIUS / COUNTS_PER_REV
+        self.COUNTS_TO_DISTANCE_R = 2 * math.pi * ROBOT_WHEEL_RADIUS_R / COUNTS_PER_REV
+        self.COUNTS_TO_DISTANCE_L = 2 * math.pi * ROBOT_WHEEL_RADIUS_L / COUNTS_PER_REV
 
     ## Update the pose estimation using the wheel encoders.
     #
@@ -73,8 +84,8 @@ class EncoderPoseFilter(PoseFilter):
         self.last_counts_left = counts_l
         self.last_counts_right = counts_r
 
-        dxl = self.COUNTS_TO_DISTANCE * delta_l
-        dxr = self.COUNTS_TO_DISTANCE * delta_r
+        dxl = self.COUNTS_TO_DISTANCE_L * delta_l
+        dxr = self.COUNTS_TO_DISTANCE_R * delta_r
 
         ds = (dxr + dxl) / 2.0
         dphi_rad = (dxr - dxl) / ROBOT_WHEEL_DISTANCE
@@ -115,7 +126,7 @@ class Line:
 #
 # The coordinates should define corners of the rectangle representing the parking spot.
 class ParkingSpot:
-    def __init__(self, x1: int, y1: int, x2: int, y2: int, suitable_for_parking: bool):
+    def __init__(self, x1: int, y1: int, x2: int, y2: int, suitable_for_parking: bool, region: int ):
         """create ParkingSpot object
 
         Args:
@@ -124,21 +135,25 @@ class ParkingSpot:
             x2 (int): x2-coordinate in mm
             y2 (int): y2-coordinate in mm
             suitable_for_parking (bool): suitability
+            region(int): region of parkingspot can be 1, 2 or 3
         """
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
         self.y2 = y2
         self.suitable_for_parking = suitable_for_parking
+        self.region = region
 
 
 ## Class implementing all of the navigation functionality.
 class Navigation:
     def __init__(self, per: Perception):
         self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
-        self.parking_spot_size = 210    # Parkplatzgröße entscheidet über Eignung der Parklücke zum parken
         self.per = per
         self.has_flag = False
+
+        self.rc_old = 0
+        self.lc_old = 0
         
         self.pose = Pose()
         self.corner_correction_enabled = True   #Variable zur Aktivierung/Deaktivierung von Eckenerkennung (für Setup)
@@ -178,8 +193,9 @@ class Navigation:
             Pose(0,600,270),
             ]
          
-        self.closest_line = self.parcours[0] #Initialisierung der Variable 'closest_line' mit dem Eintrag [0] des parcours Array 
-        self.idx = -1   # Index zum zählen der Ecken
+        self.closest_line = self.parcours[0]
+        self.idx = -1
+        self.dist = float('inf')
 
     ## Return a map of the parcours.
     #
@@ -198,6 +214,7 @@ class Navigation:
     def update(self):
         self.pose_filter.update()
         self.update_pose_distance()
+
         # including flag for corners
         if not self.corner_correction_enabled:
         # im Setup: weder Corner noch Parklücken-Scan
@@ -207,22 +224,24 @@ class Navigation:
             self.has_flag = True
             #self.uart.write("Ecke erkannt")
             # finding closest point to current position
-            self.closest_point, self.idx = self.find_closest_point()
+            self.closest_point, self.idx, self.dist = self.find_closest_point()
             # find closest line from closest point
             self.closest_line = self.parcours[self.idx]
             # set x,y to closest corner
-            self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
+            if self.dist < CORNER_DISTANCE_THRESHOLD:
+                self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
             #self.uart.write(f"{self.idx}")
         #   resets the has_flag variabled
         if self.per.get_corner() == False and self.has_flag == True:
             #self.uart.write("Ecke vorbei")
+            if self.dist < CORNER_DISTANCE_THRESHOLD:
             # set phi to target-angle when corner is over
-            if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
-                self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
-                #self.uart.write(f"Winkel wird nicht gesetzt")
-            else:
-                self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
-                #self.uart.write(f"Winkel gesetzt")
+                if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
+                    self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
+                    #self.uart.write(f"Winkel wird nicht gesetzt")
+                else:
+                    self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
+                    #self.uart.write(f"Winkel gesetzt")
             self.has_flag = False
 
         if self.axis_lock_enabled == True:
@@ -255,7 +274,7 @@ class Navigation:
                 min_dist = dist
                 closest_point = element
                 closest_idx = idx
-        return closest_point, closest_idx
+        return closest_point, closest_idx, min_dist
 
     def update_pose_distance(self):
         d = self.per.get_distance()
@@ -326,75 +345,76 @@ class Navigation:
         self.d = self.per.get_distance()
         if self.d is None:
             return
-        if self.d > 100 and self.has_parkingspot == False: #Trigger for start_pose
+        if self.d > THRESHOLD_DISTANCE_SENSOR and self.has_parkingspot == False: #Trigger for start_pose
             self.has_parkingspot = True
             sx, sy = self.shift_along_heading(self.pose, 16)
             self.pose_start = Pose(sx, sy, self.pose.phi) # safe start pose 
         
-        if self.d <= 100 and self.has_parkingspot == True: # Trigger for end_pose
+        if self.d <= THRESHOLD_DISTANCE_SENSOR and self.has_parkingspot == True: # Trigger for end_pose
             self.has_parkingspot = False 
             sx, sy = self.shift_along_heading(self.pose, 16)
             self.pose_end = Pose(sx, sy, self.pose.phi)   # safe end pose 
             a = math.sqrt((self.pose_end.x - self.pose_start.x)**2 + (self.pose_end.y - self.pose_start.y)**2)  # calculate distance between start and end (filtering Noise)
             phi = self.angle_diff_deg(self.pose_start.phi, self.pose_end.phi)   # calculating angle between two points to filter out the corners
 
-            if a > 40 and phi < 45: # checking if it is real parkingspot
+            if a > FILTER_MIN_DIST and phi < FILTER_MAX_ANGLE: # checking if it is real parkingspot
 
-                if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side 
+                if abs(self.pose_start.x - self.pose_end.x) > abs(self.pose_start.y - self.pose_end.y): # checking if parking spot is on the x side (Bereich 1)
 
                     # Filter out false parking spots caused by sensor noise
                     if 280 < self.pose_start.x < 380:
                         return
+                    
+                    region = 1
 
                     if self.pose_start.x - self.pose_end.x < 0:
                         self.pose_start.y = 200 # sets the y-value to a fixed preset value (line on map)
                         self.pose_end.y = 200
 
-                    if abs(self.pose_start.x - self.pose_end.x)> self.parking_spot_size:    #checking if parking-spot is big enough 
+                    if abs(self.pose_start.x - self.pose_end.x)> PARKING_SPOT_SIZE:    #checking if parking-spot is big enough 
                         self.has_size = True    
                     else: 
                         self.has_size = False
 
-                if abs(self.pose_start.x - self.pose_end.x) < abs(self.pose_start.y - self.pose_end.y): #checking if parking spot is on the y side (right or left)
-                    if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map
+                if abs(self.pose_start.x - self.pose_end.x) < abs(self.pose_start.y - self.pose_end.y): #checking if parking spot is on the y side (right or left) (Bereich 2 oder 3)
+                    if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map (Bereich 2)
+                        region = 2
                         self.pose_start.x = 900     # set the x-value to a fixed preset value (line on map)
                         self.pose_end.x = 900
                     
-                    if self.pose_start.y - self.pose_end.y > 0: #checking if the parking-spot is on the left side of map
+                    if self.pose_start.y - self.pose_end.y > 0: #checking if the parking-spot is on the left side of map (Bereich 3)
+                        region = 3
                         self.pose_start.x = -100    # set the x-value to a fixed preset value (line on map)
                         self.pose_end.x = -100    
 
-                    if abs(self.pose_start.y - self.pose_end.y) > self.parking_spot_size:   #checking if parking spot is big enough
+                    if abs(self.pose_start.y - self.pose_end.y) > PARKING_SPOT_SIZE:   #checking if parking spot is big enough
                         self.has_size = True
                     else:
                         self.has_size = False
                      
-                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size)    #creating new spot
+                spot = ParkingSpot(self.pose_start.x, self.pose_start.y, self.pose_end.x, self.pose_end.y, self.has_size, region)    #creating new spot
 
-                new_orient, new_line = self.spot_orientation_and_line(spot) #orientation and fixed value of the parking spot
+                #new_orient, new_line = self.spot_orientation_and_line(spot) #orientation and fixed value of the parking spot
 
                 self.to_delete.clear()  # clearing the array of old parking spots
 
                 # Iterate through the list of parking spots to detect overlapping spots
                 for spot_id, old_spot in list(self.parking_spots.items()):
-                    old_orient, old_line = self.spot_orientation_and_line(old_spot)
-                    # if the new spot and the old spot have different orientations, there is notthing more to compare
-                    if new_orient != old_orient:
-                        continue
-                    # old spot and new spot have the same orientation
-                    if new_orient == "x":
-                        # checking if the fixed value is the same
-                        if abs(new_line - old_line)> 1e-6:
-                            continue
+
+                    if old_spot.region == spot.region:
                         # checking if there is overlapping
-                        if self.intervals_overlap(spot.x1, spot.x2, old_spot.x1, old_spot.x2):
-                            self.to_delete.append(spot_id)
+                        if spot.region == 1:
+                            if self.intervals_overlap(spot.x1, spot.x2, old_spot.x1, old_spot.x2):
+                                self.to_delete.append(spot_id)
+                            continue  
+                        # checking if there is overlapping in region 2 or 3
+                        else:
+                            if self.intervals_overlap(spot.y1, spot.y2, old_spot.y1, old_spot.y2):
+                                self.to_delete.append(spot_id)
+                            continue
 
                     else:
-                        if abs(new_line - old_line)> 1e-6:
-                            continue
-                        if self.intervals_overlap(spot.y1, spot.y2, old_spot.y1, old_spot.y2):
-                            self.to_delete.append(spot_id)
+                        continue
 
                 for spot_id in self.to_delete:
                     # delete overlapping parkingspots from parking_spots
@@ -419,22 +439,9 @@ class Navigation:
         phi = pose.phi * DEG_TO_RAD
         return pose.x + math.cos(phi)*dx, pose.y + math.sin(phi)*dx
 
-
-    def spot_orientation_and_line(self, spot):
-        """
-        orient: "x" Spot liegt entlang x (y ist fix)
-                "y" Spot liegt entlang y (x ist fix)
-        line_value: bei "x" ist es y_fix also 200
-                    bei "y" ist es x_fix (900 oder -100)
-        """
-        dx = abs(spot.x2 - spot.x1)
-        dy = abs(spot.y2 - spot.y1)
-        if dx >= dy:
-            return "x", spot.y1  # y1==y2==fix
-        else:
-            return "y", spot.x1  # x1==x2==fix
-
     def intervals_overlap(self,u1, u2, v1, v2):
+        # sorting: smaller number has to be first
         lo1, hi1 = sorted((u1, u2))
         lo2, hi2 = sorted((v1, v2))
+        # returens true when intervals overlap
         return (lo1 <= hi2) and (lo2 <= hi1)

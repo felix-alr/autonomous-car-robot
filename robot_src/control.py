@@ -149,7 +149,7 @@ class KinematicController:
 
         # Safety parameters
         self.max_motor_speed_value = 6000
-        self.safety_factor = 0.8
+        self.safety_factor = 0.67
 
     ## Set movement setpoint.
     #
@@ -209,7 +209,7 @@ class KinematicController:
         # Set motor speeds
         self._motors.set_speeds(
             max(min(self.yMLeft(mLeft), self.safety_factor * self.max_motor_speed_value), -self.safety_factor * self.max_motor_speed_value),
-            max(min(self.yMLeft(mRight), self.safety_factor * self.max_motor_speed_value), -self.safety_factor * self.max_motor_speed_value))
+            max(min(self.yMRight(mRight), self.safety_factor * self.max_motor_speed_value), -self.safety_factor * self.max_motor_speed_value))
 
     # yM (for the right motor) as a function of right wheel speed
     def yMRight(self, wheel_speed_right):

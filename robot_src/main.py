@@ -1,5 +1,6 @@
 ## @package main
-#
+# Group: HSAR1
+# Edited by: REMOVED
 # Entry point and init script
 
 try:

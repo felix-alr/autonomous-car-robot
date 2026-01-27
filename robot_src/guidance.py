@@ -1,4 +1,5 @@
 ## @package guidance
+# Group: HSAR1
 # Author: REMOVED, Matrikelnummer: REMOVED
 # Module containing the state machines to orchestrate the other modules, so the robot fulfills its tasks.
 from perception import Perception

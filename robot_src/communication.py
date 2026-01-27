@@ -10,6 +10,8 @@
 # Users can further bind callback functions to keystrokes, so they will be executed when the corresponding
 # key is received.
 
+# HSAR1, REMOVED, Matrikelnummer: REMOVED
+
 from machine import Pin, UART
 from navigation import Navigation, ParkingSpot
 

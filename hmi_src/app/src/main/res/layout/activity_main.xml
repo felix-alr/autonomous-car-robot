@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+    HSAR1: REMOVED
+    Matrikelnummer: REMOVED
+
     Hauptlayout für die Robotersteuerungs-App.
     LinearLayout (vertikal) wird verwendet, um UI-Elemente untereinander anzuordnen.
     Jedes Steuerelement (Button/TextView) ist mit einer eindeutigen ID versehen,

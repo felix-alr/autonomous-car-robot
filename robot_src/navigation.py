@@ -18,7 +18,7 @@ import time
 import math
 
 from pololu_3pi_2040_robot import robot
-from parameters import ROBOT_WHEEL_DISTANCE, ROBOT_WHEEL_RADIUS, COUNTS_PER_REV
+from parameters import ROBOT_WHEEL_DISTANCE, ROBOT_WHEEL_RADIUS, COUNTS_PER_REV, ROBOT_WHEEL_RADIUS_L, ROBOT_WHEEL_RADIUS_R
 from perception import Perception
 
 RAD_TO_DEG = 180.0 / pi
@@ -69,7 +69,8 @@ class EncoderPoseFilter(PoseFilter):
         super().__init__(pose)
         self.encoders = encoders
         self.last_counts_left, self.last_counts_right = encoders.get_counts()
-        self.COUNTS_TO_DISTANCE = 2 * math.pi * ROBOT_WHEEL_RADIUS / COUNTS_PER_REV
+        self.COUNTS_TO_DISTANCE_R = 2 * math.pi * ROBOT_WHEEL_RADIUS_R / COUNTS_PER_REV
+        self.COUNTS_TO_DISTANCE_L = 2 * math.pi * ROBOT_WHEEL_RADIUS_L / COUNTS_PER_REV
 
     ## Update the pose estimation using the wheel encoders.
     #
@@ -83,8 +84,8 @@ class EncoderPoseFilter(PoseFilter):
         self.last_counts_left = counts_l
         self.last_counts_right = counts_r
 
-        dxl = self.COUNTS_TO_DISTANCE * delta_l
-        dxr = self.COUNTS_TO_DISTANCE * delta_r
+        dxl = self.COUNTS_TO_DISTANCE_L * delta_l
+        dxr = self.COUNTS_TO_DISTANCE_R * delta_r
 
         ds = (dxr + dxl) / 2.0
         dphi_rad = (dxr - dxl) / ROBOT_WHEEL_DISTANCE
@@ -148,7 +149,6 @@ class ParkingSpot:
 class Navigation:
     def __init__(self, per: Perception):
         self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
-            # Parkplatzgröße entscheidet über Eignung der Parklücke zum parken
         self.per = per
         self.has_flag = False
 
@@ -407,6 +407,7 @@ class Navigation:
                             if self.intervals_overlap(spot.x1, spot.x2, old_spot.x1, old_spot.x2):
                                 self.to_delete.append(spot_id)
                             continue  
+                        # checking if there is overlapping in region 2 or 3
                         else:
                             if self.intervals_overlap(spot.y1, spot.y2, old_spot.y1, old_spot.y2):
                                 self.to_delete.append(spot_id)

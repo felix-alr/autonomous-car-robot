@@ -231,23 +231,26 @@ class Navigation:
             
             # set x,y to closest corner
             #self.uart.write(f"{self.dist}")
-            if self.dist < CORNER_DISTANCE_THRESHOLD:
-                self.closest_line = self.parcours[self.idx]
-                #self.uart.write("Ecke erkannt \n")
-                #self.uart.write(f"{self.idx}\n")
-                self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)    # Villeicht muss man den Winkel auch gar nicht mit setzen
+            if self.dist > CORNER_DISTANCE_THRESHOLD:
+                return
+
+            self.closest_line = self.parcours[self.idx]
+            #self.uart.write("Ecke erkannt \n")
+            #self.uart.write(f"{self.idx}\n")
+            self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)        
             #self.uart.write(f"{self.idx}")
         #   resets the has_flag variabledr
         if self.per.get_corner() == False and self.has_flag == True:
             #self.uart.write("Ecke vorbei")
-            if self.dist < CORNER_DISTANCE_THRESHOLD:
+            if self.dist > CORNER_DISTANCE_THRESHOLD:
             # set phi to target-angle when corner is over
-                if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
-                    self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
-                    #self.uart.write(f"Winkel wird nicht gesetzt")
-                else:
-                    self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
-                    #self.uart.write(f"Winkel gesetzt")
+                return
+            if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
+                self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
+                #self.uart.write(f"Winkel wird nicht gesetzt")
+            else:
+                self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
+                #self.uart.write(f"Winkel gesetzt")
             #self.current_line = (self.current_line+1) % len(self.parcours)
             self.has_flag = False
 

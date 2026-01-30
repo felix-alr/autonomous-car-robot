@@ -25,7 +25,7 @@ RAD_TO_DEG = 180.0 / pi
 DEG_TO_RAD = pi / 180.0
 
 
-CORNER_DISTANCE_THRESHOLD = 45
+CORNER_DISTANCE_THRESHOLD = 100
 
 FILTER_MIN_DIST = 40 # minimal distance between start and end pose of parkingspot
 FILTER_MAX_ANGLE = 45 # maximal angle betwenn start and end pose of parkingspot
@@ -151,6 +151,7 @@ class Navigation:
         self.has_parkingspot = False #Variable zur Zustandsspeicherung (fährt an Parklücke vorbei oder nicht)
         self.per = per
         self.has_flag = False
+        self.has_wrong_flag = False
 
         self.rc_old = 0
         self.lc_old = 0
@@ -223,50 +224,51 @@ class Navigation:
             return
         
         if self.per.get_corner() == True and self.has_flag == False:    # makes shure that code gets executed once 
-            self.has_flag = True
-            #self.uart.write("Ecke erkannt")
-            # finding closest point to current position
-            self.closest_point, self.idx, self.dist = self.find_closest_point()
-            # find closest line from closest point
             
-            # set x,y to closest corner
-            #self.uart.write(f"{self.dist}")
+            #self.uart.write("Ecke erkannt")
+
+            # finding closest point to current position
+            
+            c_p, idx, self.dist = self.find_closest_point()
+            
+            #check if it is a real corner
             if self.dist > CORNER_DISTANCE_THRESHOLD:
                 return
-
+            
+            #when it is a real corner: set closest_point, index and has_flag variable
+            self.has_flag = True
+            self.closest_point = c_p
+            self.idx = idx
+            # find closest line from closest point
             self.closest_line = self.parcours[self.idx]
-            #self.uart.write("Ecke erkannt \n")
-            #self.uart.write(f"{self.idx}\n")
+            
+            #set x, y to the closest point
             self.set_pose(self.closest_point.x,self.closest_point.y, self.pose.phi)        
-            #self.uart.write(f"{self.idx}")
+            
         #   resets the has_flag variabledr
         if self.per.get_corner() == False and self.has_flag == True:
-            #self.uart.write("Ecke vorbei")
-            if self.dist > CORNER_DISTANCE_THRESHOLD:
-            # set phi to target-angle when corner is over
-                return
+            # not setting angle on corner 3 and 5 when reqired
             if (not self.set_angle_at_corner) and (self.idx == 3 or self.idx ==5):
                 self.set_pose(self.pose.x, self.pose.y, self.pose.phi)
-                #self.uart.write(f"Winkel wird nicht gesetzt")
             else:
                 self.set_pose(self.pose.x, self.pose.y, self.closest_point.phi)
-                #self.uart.write(f"Winkel gesetzt")
-            #self.current_line = (self.current_line+1) % len(self.parcours)
+                
             self.has_flag = False
+
 
         if self.axis_lock_enabled == True:
 
             #  when x coordninate does not change 
             if self.closest_line.x_end == self.closest_line.x_start:
                 #lock x coordinate 
-                if self.per.get_corner() == True:
+                if self.has_flag == True:
                     self.set_pose_no_sync(self.closest_line.x_start, self.pose.y, self.pose.phi)
                 else:
                     self.set_pose_no_sync(self.closest_line.x_start, self.pose.y, self.closest_point.phi)
             # when y coordninate does not change 
             if self.closest_line.y_end == self.closest_line.y_start:
                 # lock y coordniate
-                if self.per.get_corner() == True:
+                if self.has_flag == True:
                     self.set_pose_no_sync(self.pose.x, self.closest_line.y_start, self.pose.phi)
                 else:
                     self.set_pose_no_sync(self.pose.x, self.closest_line.y_start, self.closest_point.phi)
@@ -395,6 +397,10 @@ class Navigation:
                 if abs(self.pose_start.x - self.pose_end.x) < abs(self.pose_start.y - self.pose_end.y): #checking if parking spot is on the y side (right or left) (Bereich 2 oder 3)
                     if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map (Bereich 2)
                         region = 2
+                        # filter out wrong parking spots
+                        if 200 < self.pose_start.y < 300:
+                            return
+                        
                         self.pose_start.x = 900     # set the x-value to a fixed preset value (line on map)
                         self.pose_end.x = 900
                     

@@ -398,7 +398,7 @@ class Navigation:
                     if self.pose_start.y - self.pose_end.y < 0: # checking if the parking-spot is on the right side of map (Bereich 2)
                         region = 2
                         # filter out wrong parking spots
-                        if 200 < self.pose_start.y < 300:
+                        if 100 < self.pose_start.y < 300:
                             return
                         
                         self.pose_start.x = 900     # set the x-value to a fixed preset value (line on map)

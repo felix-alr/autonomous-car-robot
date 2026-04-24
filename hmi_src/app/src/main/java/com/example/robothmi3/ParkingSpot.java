@@ -1,5 +1,12 @@
+// HSAR1: REMOVED
+// Matrikelnummer: REMOVED
+
 package com.example.robothmi3;
 
+/**
+ * Klasse ParkingSpot
+ * Definition Von Einem Parkplatz
+ */
 public class ParkingSpot {
     public float id, x1, y1, x2, y2, suitable;
 

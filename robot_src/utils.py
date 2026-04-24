@@ -116,3 +116,4 @@ class CSVLogger:
         entry = ",".join(row_str) + "\n"
         with open(self.file, "+a") as f:
             f.write(entry)
+   

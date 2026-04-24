@@ -1,7 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- HSAR1: REMOVED Matrikelnummer: REMOVED -->
+
     <!-- Base application theme. -->
     <style name="Base.Theme.RobotHMI3" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/my_light_primary</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
+    <style name="Theme.RobotHMI3" parent="Base.Theme.RobotHMI3" />
+
 </resources>

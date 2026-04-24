@@ -1,6 +1,9 @@
 ## @package main
-#
+# Group: HSAR1
+# Edited by: REMOVED
 # Entry point and init script
+
+# HSAR1, REMOVED, Matrikelnummer: REMOVED
 
 try:
     import time
@@ -22,7 +25,7 @@ try:
     import control_test
 
     ## time for one execution cycle
-    SAMPLETIME = 50000  # in microseconds (us)
+    SAMPLETIME = 30000  # in microseconds (us)
 
     _gui_run_fp = None # eventually hold the original gui.run func
 

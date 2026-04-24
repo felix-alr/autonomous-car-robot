@@ -12,7 +12,6 @@ Control B
 ## @package control
 #
 # Module containing the general modal controller and specific control algorithms
-import random
 
 from pololu_3pi_2040_robot.motors import Motors
 import time
@@ -434,15 +433,6 @@ class PathFollower:
         if abs(error) > 0.025:
             self.kin_ctr.set_vw(0, omega)
             return False
-        return True
-
-    def compute_angle_adjustment_step(self):
-        error = self.nav.get_pose().phi - self.phi_end
-        gain = 2.0 # Gain for calculating omega from error
-        if abs(error) < 0.025:
-            return False
-        omega = max(min(error * gain, 1.5), -1.5)
-        self.kin_ctr.set_vw(0, omega)
         return True
 
     def compute_dt(self):

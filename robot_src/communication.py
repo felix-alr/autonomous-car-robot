@@ -10,6 +10,8 @@
 # Users can further bind callback functions to keystrokes, so they will be executed when the corresponding
 # key is received.
 
+# HSAR1, REMOVED, Matrikelnummer: REMOVED
+
 from machine import Pin, UART
 from navigation import Navigation, ParkingSpot
 
@@ -68,7 +70,7 @@ class Communicator:
     def send_pose(self):
         precision = 2
         pose = self.nav.get_pose()
-        buf = f"p{self.delim}{round(pose.x, precision)}{self.delim}{round(pose.y, precision)}{self.delim}{round(pose.phi, precision)}{self.delim}"
+        buf = f"p{self.delim}{round(pose.x, precision)}{self.delim}{round(pose.y, precision)}{self.delim}{round(pose.phi, precision)}{self.delim}{round(pose.dist, precision)}{self.delim}"
         self.uart.write(buf)
 
     ## Send registered parking spots to connected bluetooth device.

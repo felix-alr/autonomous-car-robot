@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- HSAR1: REMOVED Matrikelnummer: REMOVED -->
+
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="blue">#1E6AFF</color>
-    <color name="RED">#f11</color>
+    <color name="RED">#FF5F57</color>
+    <color name="my_light_primary">#FFFFFF</color>
+    <color name="inactive">#C5D4F2</color>
+    <color name="active">#1E6AFF</color>
+
 </resources>

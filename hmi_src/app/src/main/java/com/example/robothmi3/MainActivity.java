@@ -1,3 +1,6 @@
+// HSAR1: REMOVED
+// Matrikelnummer: REMOVED
+
 package com.example.robothmi3;
 
 import android.Manifest;
@@ -7,6 +10,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.*;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.*;
 import androidx.annotation.Nullable;
@@ -17,12 +21,14 @@ import androidx.core.app.ActivityCompat;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
 import java.lang.Object;
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity
+        implements MapView.OnParkingSpotClickListener{
 
     //MapView
     private MapView mapView;
@@ -36,9 +42,8 @@ public class MainActivity extends AppCompatActivity {
     private BufferedReader reader;              // Eingabestream (zum Empfangen von Daten)
 
     // UI-Elemente
-    private TextView textViewStatus, textViewPosX, textViewPosY, textViewPhi, textViewModus, textViewText;
+    private TextView textViewStatus, textViewPosX, textViewPosY, textViewPhi, textViewModus, textViewText, textViewDst, textViewEcke;
     private Button buttonConnect, buttonIdle, buttonScout, buttonParking, buttonSetup;
-    private Button parkSlotButton1;
 
     // Handler für wiederkehrende Positionsabfragen
     private Handler handler = new Handler(Looper.getMainLooper());
@@ -47,48 +52,75 @@ public class MainActivity extends AppCompatActivity {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     @Override
+    /**
+     * Funktion Die Alle UI-Elemente (Button, Text, MapView) Initialisiert Und Mit Dem Layout Verknüpft
+     * Zusätzlich: Aktionen Für Buttons Definieren -> Senden Von Befehl An Roboter
+     * Bluetooth Verbindung Wird Vorbereitet
+     */
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         mapView = findViewById(R.id.mapView);
+        mapView.setOnParkingSpotClickListener(this);
 
         // UI-Elemente verknüpfen
         buttonConnect = findViewById(R.id.buttonConnect);
+
+        // Texte
         textViewStatus = findViewById(R.id.textViewStatus);
         textViewPosX = findViewById(R.id.textViewPosX);
         textViewPosY = findViewById(R.id.textViewPosY);
         textViewPhi = findViewById(R.id.textViewPhi);
         textViewModus = findViewById(R.id.textViewModus);
-        textViewText = findViewById(R.id.textViewText);
+        textViewDst = findViewById(R.id.textViewDst);
 
+        // Button
         buttonIdle = findViewById(R.id.buttonIdle); // Roboter Ruht
         buttonScout = findViewById(R.id.buttonScout); //Pfad Erkunden
         buttonParking = findViewById(R.id.buttonParking); //Parkplatz anzeigen
         buttonSetup = findViewById(R.id.buttonSetup); //Kalibrieren
-        //parkSlotButton1 = findViewById(R.id.parkSlotButton1);
+
+        // Aktiven Button Farbig Setzen (Start Zustand)
+        activeMode(buttonIdle);
+        textViewModus.setText("Modus: Idle");
 
         // Aktionen für Steuerungsbuttons
-        //buttonIdle.setOnClickListener(v -> sendCommand("z\n"));
+        // Idle
         buttonIdle.setOnClickListener(v -> {
-            sendCommand("z\n");
-            textViewModus.setText("Modus: Idle");
+            sendCommand("z\n");                     // Befehl An Roboter Senden
+            textViewModus.setText("Modus: Idle");   // Modus Anzeigen
+            activeMode(buttonIdle);                 // Aktiven Button Farbig Setzen
         });
-        //buttonScout.setOnClickListener(v -> sendCommand("y\n"));
+
+        // Scout
         buttonScout.setOnClickListener(v -> {
-            sendCommand("y\n");
-            textViewModus.setText("Modus: Scout");
+            sendCommand("y\n");                                 // Befehl An Roboter Senden
+            textViewModus.setText("Modus: Scout");              // Modus Anzeigen
+            activeMode(buttonScout);                            // Aktiven Button Farbig Setzen
+            ArrayList<ParkingSpot> spots = new ArrayList<>();   // Leeres Array An ParkingSpots Definieren
+            mapView.updateParkingSpots(spots);                  // Neues Zeichnen Der "leeren" Parklücken -> Bei Scout Sollen Keine Parklücken Gezeichnet Werden
         });
-        //buttonParking.setOnClickListener(v -> anfrageParkingSpots());
+
+        // Parking
         buttonParking.setOnClickListener(v -> {
-            anfrageParkingSpots();
-            textViewModus.setText("Modus: Parking");
+            anfrageParkingSpots();                      // Befehl Zur Anfrage An Roboter Senden
+            textViewModus.setText("Modus: Parking");    // Modus Anzeigen
+            activeMode(buttonParking);                  // Aktiven Button Farbig Setzen
         });
-        //parkSlotButton1.setOnClickListener(v -> sendCommand("3\n"));
-        //buttonSetup.setOnClickListener(v -> sendCommand("r\n"));
+
+        //SetUp
         buttonSetup.setOnClickListener(v -> {
-            sendCommand("r\n");
-            textViewModus.setText("Modus: SetUp");
+            sendCommand("r\n");                         // Befehl An Roboter Senden
+            textViewModus.setText("Modus: SetUp");      // Modus Anzeigen
+            activeMode(buttonSetup);                    // Aktiven Button Farbig Setzen
+
+            // SetUp Wird Innerhalb Von 3 Sekunden Ausgeführt, Danach Direkt Wieder Idle
+            handler.postDelayed(() -> {
+                sendCommand("z\n");                     // Befehl An Roboter Senden
+                textViewModus.setText("Modus: Idle");   // Modus Anzeigen
+                activeMode(buttonIdle);                 // Aktiven Button Farbig Setzen
+            }, 3_000);                        // Zeit Die Gewartet Werden Soll
         });
 
         // Bluetooth-Adapter holen (null, falls Gerät kein Bluetooth unterstützt)
@@ -204,8 +236,13 @@ public class MainActivity extends AppCompatActivity {
     private void showToast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
+
     /**
      * Startet eine wiederkehrende Aufgabe, die jede Sekunde die Position vom Roboter abfragt.
+     *
+     * Auslesen, Ausgeben Und Umrechnen Der Positionsdaten
+     * Wichitg: Koordinatensystem Des Roboters Wird Gedreht (Karte Und Roboter Haben Unterschiedliche Ursprünge)
+     * Daten Werden Der MapVie Übergeben
      */
     private void startPositionUpdates() {
         positionUpdater = new Runnable() {
@@ -213,10 +250,10 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 if (socket != null && socket.isConnected()) {
                     try {
-                        // Positionsanfrage senden
+                        // Positionsanfrage Senden
                         outputStream.write("1\n".getBytes(StandardCharsets.UTF_8));
 
-                        // Nur weiter verarbeiten, wenn "p" empfangen wird
+                        // Nur Weiter Verarbeiten, Wenn "p" Empfangen Wird
                         String line;
                         do {
                             line = reader.readLine();
@@ -224,30 +261,56 @@ public class MainActivity extends AppCompatActivity {
 
                         if (line == null) return;  // Verbindung abgebrochen
 
-                        // Positionswerte lesen
+                        // Positionswerte Auslesen
                         String posX = reader.readLine();
                         String posY = reader.readLine();
                         String phi = reader.readLine();
+                        String dst = reader.readLine();
 
-                        // UI mit neuer Position aktualisieren
+                        // UI Mit Neuer Position Aktualisieren
                         runOnUiThread(() -> {
                             textViewPosX.setText("X: " + posX);
                             textViewPosY.setText("Y: " + posY);
                             textViewPhi.setText("Phi: " + phi);
+                            textViewDst.setText("Dst: " + dst);
 
-                            // position updaten
+                            // Position Updaten Und In Float Umrechnen
                             float x = Float.parseFloat(posX);
                             float y = Float.parseFloat(posY);
                             float p = Float.parseFloat(phi);
+                            float d = Float.parseFloat(dst);
                             y = -y; // Koordinatensystem umdrehen
+                            float dx = 0;
+                            float dy = 0;
+
+                            // Position Abstand Je Nach Winkel Berechnen
+                            if (p <= 45.0f && p > -45.0f){
+                                dx = x;
+                                dy = d + y + 30;
+                            } else if (p <= 135.0f && p > 45.0f) {
+                                dx = d + x + 30;
+                                dy = y;
+                            } else if (p <= 225.0f && p > 135.0f) {
+                                dx = x;
+                                dy = y - d - 30;
+                            } else if (p <= 315.0f && p > 225) {
+                                dx = x - d - 30;
+                                dy = y;
+                            } else if (p <= -45.0f && p > -135.0f) {
+                                dx = x - d - 30;
+                                dy = y;
+                            }
 
                             //Umrechnung cm -> pixel/dp
-                            float scale = 1.13f; // umrechnung vgl Karte
-                            x = x*scale;
-                            y = y*scale;
-                            p = p*scale;
+                            float scaleX = 1.1167f; // umrechnung vgl Karte
+                            float scaleY = 1.109167f; // umrechnung vgl Karte
+                            x = x*scaleX;
+                            y = y*scaleY;
+                            dx = dx*scaleX;
+                            dy = dy*scaleY;
 
-                            mapView.updateRobotPose(x, y, p);
+                            // Übergabe Daten An MapView
+                            mapView.updateRobotPose(x, y, p, dx, dy);
                         });
 
                     } catch (IOException e) {
@@ -257,7 +320,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
 
-                // Nächste Positionsabfrage planen
+                // Nächste Positionsabfrage Planen
                 if (keepUpdating) {
                     handler.postDelayed(this, 100); // 1000 ms = 1 Sekunde
                 }
@@ -294,6 +357,12 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    /**
+     * Wird Aufgerufen Beim Drücken Des Parking Buttons
+     * Positionsabfrage Des Roboters Stoppen Um Anfrage An ParkingSpots Zu Senden
+     * Befehl Wird Gesendet Und Empfangene Spots In Array Gespeichert
+     * Ausgabe Anzahl ParkingSpots
+     */
     private void anfrageParkingSpots() {
         new Thread(() -> {
             if (socket != null && socket.isConnected()) {
@@ -301,6 +370,7 @@ public class MainActivity extends AppCompatActivity {
                     keepUpdating = false; // Positionen pausieren
                     handler.removeCallbacks(positionUpdater);
 
+                    // Befehl Senden Und Daten Empfangen
                     synchronized (reader) {
                         outputStream.write("2\n".getBytes(StandardCharsets.UTF_8));
 
@@ -309,9 +379,8 @@ public class MainActivity extends AppCompatActivity {
                         runOnUiThread(() -> {
                             mapView.updateParkingSpots(spots);
                             textViewModus.setText("Parkplätze empfangen: " + spots.size());
-                            textViewText.setText(parkingSpotsToText(spots));
 
-                            // Positionen wieder aktivieren
+                            // Positionen Wieder Aktivieren
                             keepUpdating = true;
                             handler.post(positionUpdater);
                         });
@@ -325,39 +394,27 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    private String parkingSpotsToText(ArrayList<ParkingSpot> spots) {
-        StringBuilder sb = new StringBuilder();
-
-        for (ParkingSpot p : spots) {
-
-            float x1 = p.x1;
-            float y1 = p.y1;
-            float x2 = p.x2;
-            float y2 = p.y2;
-
-            sb.append(
-                    "Spot: x1=" + x1 +
-                            ", y1=" + y1 +
-                            ", x2=" + x2 +
-                            ", y2=" + y2 +
-                            ", id=" + p.id +
-                            "\n"
-            );
-        }
-        return sb.toString();
-    }
-
+    /**
+     * Wird Aufgerufen Von anfrageParkingSpots
+     * Lesen Der ParkingSpots Von Empfangenen Daten
+     * Wartet Bis "s" Kommt -> Sammelt Und Liest Daten -> Bis "end"
+     * Empfangene Daten Trennen Nach ";"
+     * -> 6 Empfangene Daten Bilden Einen ParkingSPot
+     * Nacheinander Spots Generieren Und Diese Zur Liste Hinzufügen
+     * @return Liste Der Empfangenen ParkingSpots
+     * @throws IOException FÜr Fehler
+     */
     private ArrayList<ParkingSpot> readParkingSpots() throws IOException {
         ArrayList<ParkingSpot> spots = new ArrayList<>();
 
-        // 1) Warten bis "s" kommt
+        // Warten bis "s" kommt
         String line;
         do {
             line = reader.readLine();    // blockiert wie bei Positionsdaten
             if (line == null) return spots;
         } while (!line.equals("s"));
 
-        // 2) Zeilen sammeln bis "end"
+        // Zeilen Sammeln Bis "end"
         StringBuilder buffer = new StringBuilder();
         while (true) {
             line = reader.readLine();    // blockiert
@@ -367,19 +424,109 @@ public class MainActivity extends AppCompatActivity {
             buffer.append(line).append(";");
         }
 
-        // 3) Tokens parsen
+        // Tokens Parsen
         String[] tokens = buffer.toString().split(";");
 
+        // Alle 6 Parameter Bilden Einen ParkingSpot
         for (int i = 0; i + 5 < tokens.length; i += 6) {
-            float id = Float.parseFloat(tokens[i]);
-            float x1 = Float.parseFloat(tokens[i + 1]);
-            float y1 = Float.parseFloat(tokens[i + 2]);
-            float x2 = Float.parseFloat(tokens[i + 3]);
-            float y2 = Float.parseFloat(tokens[i + 4]);
-            float suitable = Float.parseFloat(tokens[i + 5]);
 
-            spots.add(new ParkingSpot(id, x1, y1, x2, y2, suitable));
+            spots.add(createParkingSpot(Arrays.copyOfRange(tokens, i, i+6)));
         }
         return spots;
     }
+
+    /**
+     * Aufgerufen Von readParkingSpots
+     * Einem ParkingSpot Seine Daten Zuordnen
+     * @param data 6 Daten Bilden Eine Parklücke -> Werden Den Start Und End Werten Zugeordnet
+     * @return Fertige Parklücke
+     */
+    private ParkingSpot createParkingSpot(String[] data){
+        // Daten lesen Und In FLoat Wandeln
+        float id = Float.parseFloat(data[0]);
+        float x1 = Float.parseFloat(data[1]);
+        float y1 = Float.parseFloat(data[2]);
+        float x2 = Float.parseFloat(data[3]);
+        float y2 = Float.parseFloat(data[4]);
+        float suitable = Float.parseFloat(data[5]);
+
+        // Verhältnis Karte
+        float scaleX = 1.1167f;
+        float scaleY = 1.09167f;
+
+        // Start Und Endkoordinaten
+        float xStart = x1;
+        float yStart = y1;
+        float xEnd   = x2;
+        float yEnd   = y2;
+
+        // Offset Der Karte
+        float offsetX = 250;
+        float offsetY = 775;
+
+        // Parklücke Definieren -> Koordinaten Definieren Für MapView Zum Zeichnen
+        if (yStart == yEnd) {// Horizontale Parklücke Nach Unten
+            xStart = offsetX + xStart * scaleX;
+            yStart = offsetY - yStart * scaleY;
+            xEnd = offsetX + xEnd * scaleX;
+            yEnd = offsetY - (yEnd - 125) * scaleY;
+        } else if (xStart == xEnd && yStart < yEnd) { // Vertikale Parklücke Nach Rechts
+            xStart = offsetX+xStart*scaleX;
+            yStart = offsetY-y2*scaleY;
+            xEnd   = offsetX+(xEnd+125)*scaleX;
+            yEnd   = offsetY-y1*scaleY;
+        } else if (xStart == xEnd && yStart> yEnd) { // Vertikale Parklücke Nach Links
+            xStart = offsetX+(xStart-125)*scaleX;
+            yStart = offsetY-yStart*scaleY;
+            xEnd   = offsetX+xEnd*scaleX;
+            yEnd   = offsetY-yEnd*scaleY;
+        }
+
+        return new ParkingSpot(id, xStart, yStart, xEnd, yEnd, suitable);
+    }
+
+    /**
+     * Ausgeführt Wenn In MapView Tippen Erkannt Wurde
+     * Sender Der Gefundenen Id
+     * @param spotId
+     */
+    public void onParkingSpotClicked(float spotId) {
+        sendSpotId(spotId);
+        System.out.println("onParkingSpotClicked");
+    }
+
+    /**
+     * Senden Der ID Aus onParkingSpotClicked Als Command mit ID
+     * @param id Der Parklücke
+     * Ausgabe der ID
+     */
+    public void sendSpotId(float id){
+        int ID = (int) id;
+        sendCommand("3 "+ ID +"\r");
+        textViewModus.setText("Einparken: " + ID);
+        System.out.println("sendSpotId");
+    }
+
+    /**
+     * Aufgerufen in onCreat Beim Drücken Der Buttons
+     * Setzt Aktiven Button (Button Der Gedrückt Wurde) Auf Aktive Farbe
+     * Alle Anderen Buttons Werden Auf Inaktive Farbe Gesetzt
+     * @param activeButton
+     */
+    private void activeMode(Button activeButton) {
+        // Alle Buttons Zurücksetzen
+        buttonIdle.setBackgroundTintList(
+                getColorStateList(R.color.inactive));
+        buttonScout.setBackgroundTintList(
+                getColorStateList(R.color.inactive));
+        buttonParking.setBackgroundTintList(
+                getColorStateList(R.color.inactive));
+        buttonSetup.setBackgroundTintList(
+                getColorStateList(R.color.inactive));
+
+        // Aktiven Button Hervorheben
+        activeButton.setBackgroundTintList(
+                getColorStateList(R.color.active));
+    }
+
 }
